@@ -1,0 +1,4 @@
+dd if=/dev/zero of=floppy.img bs=1440K count=1
+mkfs.msdos -F 12 floppy.img
+mcopy -i floppy.img hello.com ::
+wcl -bt=dos desktop.c graphics.c mouse.c
