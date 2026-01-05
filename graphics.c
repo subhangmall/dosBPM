@@ -2,7 +2,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <i86.h>
+#include <stdlib.h>
+#include <malloc.h>
 #include "font.h"
+
+unsigned char __huge *vBuffer;
 
 void setPalette(unsigned char colorPalette[16][3]);
 void draw(unsigned short x, unsigned short y, unsigned char color);
@@ -51,6 +55,8 @@ void initVideoMode() {
 
     
     setPalette(pal);
+
+    vBuffer = (unsigned char __huge *)halloc(307200L, 1); // 640*480 = 307.2 kB
 }
 
 void setPalette(unsigned char colorPalette[16][3]) {
@@ -126,69 +132,7 @@ void writeWithBackground(unsigned char message[], unsigned char fgColor, unsigne
 
 // REVIEW MEMORY STRUCTURE LATER
 void draw(unsigned short x, unsigned short y, unsigned char color) {
-    // offset = (horizontal_res/8) * y + (x/8)
-    // bit = 7 - (x % 8)
-    unsigned int offset = (80 * y) + (x/8);
-    unsigned int bit = 7 - (x % 8);
-    volatile unsigned char __far *vga = (volatile unsigned char __far *)MK_FP(0xA000, 0);
-    unsigned char dummy;
-    unsigned char bitMask = 1 << bit;
-    
-    // address map mask register and enable all bitplanes
-    __asm {
-        mov dx, 0x3C4
-        mov al, 0x02
-        out dx, al
-        inc dx
-        mov al, 0x0F
-        out dx, al
-    }
-
-    // set write mode to 2
-    __asm {
-        mov dx, 0x3CE
-        mov al, 0x05
-        out dx, al
-        inc dx
-        mov al, 0x02
-        out dx, al
-    }
-
-    // send bit mask to bit mask register (only edit the specific pixel)
-    __asm {
-        mov dx, 0x3CE
-        mov al, 0x08
-        out dx, al
-        inc dx
-        mov al, bitMask
-        out dx, al
-    }
-    
-    dummy = vga[offset]; // dummy read to make hardware copy current data of 4 planes to internal latches
-    
-    vga[offset] = color; // write color data (only the bitplanes selected by bit mask will be affected)
-
-    // reset 
-
-    // set bit mask register back to 0xFF
-    __asm {
-        mov dx, 0x3CE
-        mov al, 0x08
-        out dx, al
-        inc dx
-        mov al, 0xFF
-        out dx, al
-    }
-
-    // set write mode back to 0
-    __asm {
-        mov dx, 0x3CE
-        mov al, 0x05
-        out dx, al
-        inc dx
-        mov al, 0x00
-        out dx, al
-    }
+    drawToBuffer(x, y, color);
 }
 
 void drawBackground() {
@@ -200,6 +144,95 @@ void drawBackground() {
         for (y = 0; y < 480; y++) {
             draw(x, y, 3); // teal bg
         }
+    }
+}
+
+void drawToBuffer(unsigned int x, unsigned int y, unsigned char color) {
+    unsigned long offset = (640UL * y) + (unsigned long)x;
+    vBuffer[offset] = color & 0x0F; // to be safe, mask to 4 bits
+}
+
+void renderBuffer(void) {
+    unsigned int plane;
+    unsigned long startingByteIdx;
+    unsigned int byteIdx;
+    unsigned char bitMask;
+    unsigned char byte;
+    volatile unsigned char __far *vga = (volatile unsigned char __far *)MK_FP(0xA000, 0);
+    unsigned int vgaIdx;
+    unsigned char __huge *p;
+
+    // enable write mode 0
+    __asm {
+        mov dx, 0x3CE
+        mov al, 0x05
+        out dx, al
+        inc dx
+        mov al, 0x00
+        out dx, al
+    }
+
+    // set bit mask to 0xFF, meaning all pixels will be written
+    __asm {
+        mov dx, 0x3CE
+        mov al, 0x08
+        out dx, al
+        inc dx
+        mov al, 0xFF
+        out dx, al
+    }
+
+    for (plane = 0; plane < 4; plane++) {
+        // select plane to write to
+        bitMask = 1 << plane;
+        vgaIdx = 0;
+
+        // set map mask to current plane
+        __asm {
+            mov dx, 0x3C4
+            mov al, 0x02
+            out dx, al
+            inc dx
+            mov al, bitMask
+            out dx, al
+        }
+
+        for(startingByteIdx = 0; startingByteIdx < 307200; startingByteIdx += 8) {
+            // slightly slow, so better to just not loop
+            // byte = 0;
+            // for (byteIdx = 0; byteIdx < 8; byteIdx++) {
+            //     if(vBuffer[startingByteIdx + byteIdx] & bitMask) {
+            //         // if the bit is set to 1 for the corresponding plane, set the bit in the plane to 1
+            //         byte |= 1 << (7-byteIdx);
+            //     }      
+            // }
+            // vga[vgaIdx] = byte;
+            // vgaIdx++;
+            byte = 0;
+
+            p = &vBuffer[startingByteIdx];
+
+            if (p[0] & bitMask) byte |= 0x80;
+            if (p[1] & bitMask) byte |= 0x40;
+            if (p[2] & bitMask) byte |= 0x20;
+            if (p[3] & bitMask) byte |= 0x10;
+            if (p[4] & bitMask) byte |= 0x08;
+            if (p[5] & bitMask) byte |= 0x04;
+            if (p[6] & bitMask) byte |= 0x02;
+            if (p[7] & bitMask) byte |= 0x01;
+
+            vga[vgaIdx++] = byte;
+        }
+    }
+
+    // reset map mask to 0xFF
+    __asm {
+        mov dx, 0x3C4
+        mov al, 0x02
+        out dx, al
+        inc dx
+        mov al, 0xFF
+        out dx, al
     }
 }
 
