@@ -1,11 +1,7 @@
-# 1. Assemble (NASM)
 nasm -f elf32 kernelInit.asm -o kernelInit.o
 
-# 2. Compile switch.c (Add -fno-pic and -fno-stack-protector HERE)
 gcc -m32 -ffreestanding -fno-pic -fno-stack-protector -c switch.c -o switch.o
 
-# 3. Compile kernel.c (Add -fno-pic HERE)
 gcc -m32 -ffreestanding -fno-pic -fno-stack-protector -c kernel.c -o kernel.o
 
-# 4. Link (Remove -fno-pic from this line)
 ld -m elf_i386 -Ttext 0x1000 -e main --oformat binary kernelInit.o switch.o kernel.o -o kernel.bin
