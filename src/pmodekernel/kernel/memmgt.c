@@ -155,7 +155,7 @@ bool addPage(uint32_t vAddr, bool shouldZero) {
         // page table present
         struct PageTableEntry* pte = (struct PageTableEntry*)(vAddr >> 12); 
         
-        if (pte.present == 0) {
+        if (pte->present == 0) {
             // page not allocated yet
             uint32_t pagePhysicalAddr = palloc();
             if (pagePhysicalAddr == 0xFFFFFFFF) return false; // out of memory

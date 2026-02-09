@@ -1,4 +1,5 @@
-[bits 32]               
+[bits 32]           
+section .text    
 global pModeMain     
 extern kentry          
 
@@ -11,7 +12,7 @@ pModeMain:
     mov ss, ax
 
     mov esp, 0x90000    ; setup stack
-    call kentry          ; kump to C
+    call kentry          ; jump to C
 
 hang:
     hlt
