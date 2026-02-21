@@ -1,0 +1,4 @@
+keyboard.c(161): Error! E1156: Assembler error: 'Operator is expected'
+keyboard.c(177): Error! E1156: Assembler error: 'Operands must be the same size'
+keyboard.c(179): Error! E1156: Assembler error: 'Operands must be the same size'
+keyboard.c(345): Warning! W138: No newline at end of file

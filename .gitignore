@@ -1,4 +1,2 @@
-*.exe
-*.o
-*.err
-*.img
+tmp
+target
