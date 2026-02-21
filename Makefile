@@ -1,34 +1,40 @@
-# Default behaviour for the command 'make': create img if something changed.
-all: ./target/floppy.img
+.PHONY: all run clean
 
-# Command to build and run with QEMU the operating system.
-run: all
-	qemu-system-i386 -fda ./target/floppy.img -d int,cpu_reset -no-reboot -D ./target/floppy.log
+KERNEL := src/pmodekernel/kernel
+BOOT := src/pmodekernel/boot
+TMP := tmp
+OUT := target
 
-# Build and debug os with QEMU and GDB; load .gdb config and scripts.
-dbg: all
-	echo "\
-\nset disassembly-flavor intel\
-\ntarget remote | qemu-system-i386 -fda ./target/floppy.img -d int,cpu_reset -no-reboot -D ./target/floppy.log -S -gdb stdio\
-\nlayout asm\
-\nb *0x7c00\
-\nc\
-\nx/16xh 0x7dfe" > ./target/debug-script.gdb
-	gdb -tui -x ./target/debug-script.gdb
+all: $(OUT)/floppy.img
 
-# In order to create the .img file, the .bin file must be created first.
-./target/floppy.img: ./target/main.bin
-	cp ./target/main.bin ./target/floppy.img
-	truncate -s 1440k ./target/floppy.img
+run: $(OUT)/floppy.img
+	qemu-system-i386 -fda $(OUT)/floppy.img
 
-# In order to create the .bin file, the .asm file must be modified.
-./target/main.bin: ./target ./src/main.asm
-	nasm -f bin -o ./target/main.bin ./src/main.asm
+$(OUT)/floppy.img: $(TMP)/boot.bin $(TMP)/kernel.bin | $(OUT)
+	dd if=/dev/zero of=$(OUT)/floppy.img bs=512 count=2880
+	dd if=$(TMP)/boot.bin of=$(OUT)/floppy.img conv=notrunc
+	dd if=$(TMP)/kernel.bin of=$(OUT)/floppy.img bs=512 seek=1 conv=notrunc
 
-# Ensure the target directory exists
-./target:
-	mkdir -p ./target
+$(TMP)/boot.bin: $(BOOT)/boot.asm | $(TMP)
+	nasm -f bin $(BOOT)/boot.asm -o $(TMP)/boot.bin
 
-# No requirement needed to run 'make clean': just delete ./target/*
+$(TMP)/kernel.bin: $(TMP)/kernel.elf
+	objcopy -O binary $(TMP)/kernel.elf $(TMP)/kernel.bin
+
+$(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/kmemmgt.o $(KERNEL)/linker.ld
+	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/kmemmgt.o
+
+$(TMP)/kernel.o: $(KERNEL)/kernel.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
+$(TMP)/kmemmgt.o: $(KERNEL)/kmemmgt.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
+$(TMP):
+	mkdir -p $(TMP)
+
+$(OUT):
+	mkdir -p $(OUT)
+
 clean:
-	rm ./target/*
+	rm -rf $(TMP) $(OUT)

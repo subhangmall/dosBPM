@@ -3,12 +3,13 @@
 #include <stdbool.h>
 
 #define PAGE_SIZE 4096
-#define RECURSIVE_PD ((struct PageDirectoryEntry*)0xFFFFF000) // where Page Directory Table appears in memory b/c the last idx of the PDT refers back to the start of the PDT
-#define RECURSIVE_PT ((struct PageTableEntry*)0xFFC00000) // first page table
+#define RECURSIVE_PD_ADDR 0xFFC00000
+#define RECURSIVE_PD ((struct PageDirectoryEntry*) RECURSIVE_PD_ADDR) // where Page Directory Table appears in memory b/c the last idx of the PDT refers back to the start of the PDT
 #define NULL ((void*)0)
 
-uint32_t palloc();
+uint32_t findNextPageStart();
 void* kalloc(uint32_t numBytes);
+void* kcalloc(uint32_t numBytes);
 bool addPage(uint32_t vAddr, bool shouldZero);
 void free(void* ptr);
 
@@ -153,11 +154,11 @@ bool addPage(uint32_t vAddr, bool shouldZero) {
 
     if (kernelPageDirectory[ptdIdx].present == 1) {
         // page table present
-        struct PageTableEntry* pte = (struct PageTableEntry*)(vAddr >> 12); 
+        struct PageTableEntry* pte = (struct PageTableEntry*)(RECURSIVE_PD_ADDR + ((vAddr >> 12) * 4)); 
         
         if (pte->present == 0) {
             // page not allocated yet
-            uint32_t pagePhysicalAddr = palloc();
+            uint32_t pagePhysicalAddr = findNextPageStart();
             if (pagePhysicalAddr == 0xFFFFFFFF) return false; // out of memory
 
             struct PageTableEntry pte = { 
@@ -173,8 +174,9 @@ bool addPage(uint32_t vAddr, bool shouldZero) {
                 .available = 0,
                 .pageAddress = (pagePhysicalAddr >> 12)
             };
-
-            uint32_t pteAddress = 0xFFC00000 + ((vAddr >> 12) * 4);
+            
+            // FIX LINE
+            uint32_t pteAddress = RECURSIVE_PD_ADDR + ((vAddr >> 12) * 4);
             struct PageTableEntry* ptePtr = (struct PageTableEntry*)pteAddress;
                 
             *ptePtr = pte;
@@ -192,24 +194,21 @@ bool addPage(uint32_t vAddr, bool shouldZero) {
             );
             
             if (shouldZero) {
-                vAddr &= 0b111111111111;
-                uint32_t* pageBytes = (uint32_t*) vAddr;
-                for (int i = 0; i < 32; i++) {
-                    pageBytes[i] = 0x00000000;
+                vAddr &= 0b11111111111111111111000000000000;
+                uint8_t* pageBytes = (uint8_t*) vAddr;
+                for (int i = 0; i < 4096; i++) {
+                    pageBytes[i] = 0x00;
                 }
             }
             
             return true;
 
-            
-
-
         } else {
             if (shouldZero) {
-                vAddr &= 0b111111111111;
-                uint32_t* pageBytes = (uint32_t*) vAddr;
-                for (int i = 0; i < 32; i++) {
-                    pageBytes[i] = 0x00000000;
+                vAddr &= 0b11111111111111111111000000000000;
+                uint8_t* pageBytes = (uint8_t*) vAddr;
+                for (int i = 0; i < 4096; i++) {
+                    pageBytes[i] = 0x00;
                 }
             }
             return true; // page already allocated
@@ -217,7 +216,7 @@ bool addPage(uint32_t vAddr, bool shouldZero) {
         
     } else {
         // page table not present
-       uint32_t pageStart = palloc();
+       uint32_t pageStart = findNextPageStart();
        if (pageStart == 0xFFFFFFFF) return false; // no mem left
 
        struct PageDirectoryEntry new  = {
@@ -235,30 +234,58 @@ bool addPage(uint32_t vAddr, bool shouldZero) {
        };
 
        kernelPageDirectory[ptdIdx] = new;
+
        asm volatile (
-            "invlpg (%0)"
-            :
-            : "r" (vAddr)
-            : "memory"
-       );
-       return addPage(vAddr);
+        "mov %%cr3, %%eax\n"
+        "mov %%eax, %%cr3\n"
+        :
+        :
+        : "eax", "memory"
+    );
+
+       uint8_t *newPageTable = (uint8_t*) (RECURSIVE_PD_ADDR + (ptdIdx << 12));
+
+       for (int i = 0; i < 4096; i++) {
+            newPageTable[i] = 0x00;
+       };
+
+       return addPage(vAddr, shouldZero);
     }
 }
 
 // page allocation from far memory. returns physical first 20 bits of address shifted right 12 bites
-uint32_t palloc() {
+uint32_t findNextPageStart() {
     if (nextFreePageFramePhysicalStartingAddress + PAGE_SIZE > maxMemory) {
         return 0xFFFFFFFF;
     } else {
         nextFreePageFramePhysicalStartingAddress += PAGE_SIZE;
+
         return nextFreePageFramePhysicalStartingAddress;
     }
+}
+
+// zero out PTE for an unused page
+void premove(uint32_t vAddr) {
+    // first 10 bits is Page Directory, next 10 is table index, next 12 is page offset
+    // loop back to start of page directory, then set the PTE to zero
+    uint32_t *PTE = (uint32_t*)((RECURSIVE_PD_ADDR) + 
+        ((0b11111111111111111111000000000000 & vAddr) >> 10));
+    *PTE = 0x00000000; // deactivate page in memory
+
+
+    // refresh tlb
+    asm volatile (
+            "invlpg (%0)"
+            :
+            : "r" (vAddr)
+            : "memory"
+    );
 }
 
 // kernel allocation, for drivers and such
 void* kalloc(uint32_t numBytes) {
     if (heapStart == NULL) {
-        addPage(nextVAddrToMap);
+        addPage(nextVAddrToMap, false);
         struct KallocHeader* head = (struct KallocHeader*)nextVAddrToMap;
         head->size = 4096-sizeof(struct KallocHeader);
         head->isFree = true;
@@ -276,7 +303,7 @@ void* kalloc(uint32_t numBytes) {
                 nextAddr += current->size;
                 
                 // check if there is enough memory free to allocate pages between nextAddr and the end of this hypothetical kalloc
-                for (int i = nextAddr; i <= nextAddr + sizeof(struct KallocHeader) + numBytes; i+=PAGE_SIZE) {
+                for (int i = nextAddr & 0b11111111111111111111000000000000; i < ((nextAddr + sizeof(struct KallocHeader) + numBytes) | 0b00000000000000000000111111111111); i+=PAGE_SIZE) {
                     if (!addPage(i, false)) return NULL;
                 }
                 struct KallocHeader* nextHeader = (struct KallocHeader*)nextAddr;
@@ -301,9 +328,9 @@ void* kalloc(uint32_t numBytes) {
 }
 
 // zeroes out memory as well
-void* kcalloc(int numBytes) {
+void* kcalloc(uint32_t numBytes) {
     if (heapStart == NULL) {
-        addPage(nextVAddrToMap);
+        addPage(nextVAddrToMap, true);
         struct KallocHeader* head = (struct KallocHeader*)nextVAddrToMap;
         head->size = 4096-sizeof(struct KallocHeader);
         head->isFree = true;
@@ -321,8 +348,8 @@ void* kcalloc(int numBytes) {
                 nextAddr += current->size;
                 
                 // check if there is enough memory free to allocate pages between nextAddr and the end of this hypothetical kalloc
-                for (int i = nextAddr; i <= nextAddr + sizeof(struct KallocHeader) + numBytes; i+=PAGE_SIZE) {
-                    if (!addPage(i, true)) return NULL;
+                for (int i = nextAddr & 0b11111111111111111111000000000000; i < ((nextAddr + sizeof(struct KallocHeader) + numBytes) | 0b00000000000000000000111111111111); i+=PAGE_SIZE) {
+                    if (!addPage(i, false)) return NULL;
                 }
                 struct KallocHeader* nextHeader = (struct KallocHeader*)nextAddr;
                 *nextHeader = (struct KallocHeader) {
@@ -356,4 +383,8 @@ void free(void* ptr) {
         kh->size += kh->next->size + sizeof(struct KallocHeader);
         kh->next = kh->next->next;
     }
+}
+
+void* allocPhysicalMemoryRange(uint32_t mmioStartingAddr, uint32_t len) {
+
 }

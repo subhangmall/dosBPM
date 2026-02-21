@@ -1,6 +1,5 @@
-
 ; ==== MEMORY AND ARCH DIRECTIVES ============================================================================ ;
-org 0x7C00
+org 0x7c00
 bits 16
 
 ; ==== BOOTLOADER MAIN ======================================================================================= ;
@@ -14,9 +13,14 @@ main:
     mov es, ax
     mov sp, 0x7C00
 
-    ; Print something in real mode
-    mov si, text16r_test
+    ; load kernel
+    call hdd_read
+
+    mov si, text_hdd_was_read
     call print16r
+
+    ; mov si, text16r_a20_enabled
+    ; call print16r
 
     ; ==== SWITCH TO 32BIT PROTECTED MODE ==================================================================== ;
     ; Necessary steps to switch from 16rm to 32pm:
@@ -38,8 +42,8 @@ main:
 
     ; if A20 is disabled, enable it and check again
     je .a20_enabled
-    mov si, text16r_a20_enabling
-    call print16r
+    ; mov si, text16r_a20_enabling
+    ; call print16r
     call a20_enable
     call a20_check
     cmp ax, 1
@@ -63,7 +67,7 @@ main:
     mov cr0, eax
 
     ; far jump to 32-bit code segment
-    jmp dword gdt.gdt_selector_32pm_cs-gdt:.32pm
+    jmp 0x08:.32pm
 
     ; ==== 32BIT PROTECTED MODE ================== ;
     .32pm:
@@ -79,9 +83,11 @@ main:
     mov edi, 0xB8000     ; start of VGA text memory
 
     ; Write character 'A' in green on black
-    mov al, 'A'          ; ASCII 'A'
-    mov ah, 0x02         ; attribute byte: black background, green foreground
-    mov [edi], ax        ; write both bytes
+    ; mov al, 'I'          ; ASCII 'A'
+    ; mov ah, 0x02         ; attribute byte: black background, green foreground
+    ; mov [edi], ax        ; write both bytes
+
+    jmp 0x08:0x00001000
 
     ; ==== LOOP FOREVER ===================================================================== ;
     .loop:
@@ -103,6 +109,9 @@ text16r_test: db `Real!`, LF, CR, 0
 text16r_a20_enabling: db `Enabling A20 Line...`, LF, CR, 0
 text16r_a20_disabled: db `Could not enable A20 Line`, LF, CR, 0
 text16r_a20_enabled: db `A20 Line Enabled`, LF, CR, 0
+text_hdd_was_not_read: db `Kernel not loaded into memory`, LF, CR, 0
+text_hdd_was_read: db `Kernel loaded into memory`, LF, CR, 0
+
 
 ; To move to a new line in VGA new lines, move
 ; cursor accordingly (buffer pointer), no CR/LF.
@@ -432,26 +441,6 @@ gdt:
     db 1_1_0_0_1111b
     db 0
 
-    ; 4th entry: 16b code segment, flat memory model
-    ; used to switch back to real mode when needed
-.gdt_selector_16pm_cs:
-    dw 0xFFFF
-    dw 0
-    db 0
-    db 1_00_1_1_0_1_0b
-    db 0_0_0_0_1111b                                ; Like 32bit code segment, but Granularity and Size set to 0
-    db 0
-
-    ; 5th entry: 16b data segment, flat memory model
-    ; used to switch back to real mode when needed
-.gdt_selector_16pm_ds:
-    dw 0xFFFF
-    dw 0
-    db 0
-    db 1_00_0_0_0_1_0b                              ; Like 16bit code segment, but Executable bit set to 0
-    db 0_0_0_0_1111b
-    db 0
-
 ; In order to load GDT, another structure is
 ; requried: the GDT descriptor.
 ; It contains GDT's size - 1 (2B) and address (4B).
@@ -459,6 +448,40 @@ gdt_descriptor:
     dw gdt_descriptor - gdt - 1             ; Calculate size using address offsets
     dd gdt
 
+hdd_read:
+    mov ax, 0x0000
+    mov es, ax              ; destination segment
+    mov bx, 0x1000          ; destination offset
+
+    mov si, 5               ; number of sectors to read
+    mov ch, 0               ; cylinder 0
+    mov dh, 0               ; head 0
+    mov cl, 2               ; start at sector 2
+
+    call read_loop
+
+    ret
+
+read_loop:
+    mov ah, 0x02            ; BIOS read
+    mov al, 0x01            ; read 1 sector
+    int 0x13
+    jc disk_error           ; carry flag = error
+
+    add bx, 512             ; next memory location
+    inc cl                  ; next sector
+    dec si
+    jnz read_loop
+
+    ret
+
+disk_error:
+    ; handle error here
+    mov si, text_hdd_was_not_read
+    call print16r
+    hlt
+
+
 ; ==== PADDING AND SIGNATURE ================================================================================= ;
 times 510-($-$$) db 0
-dw 0xAA55
+dw 0xAA55    

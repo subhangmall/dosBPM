@@ -18,3 +18,10 @@ struct BootSector {
     uint8_t bootRoutine[482];
 }
 #pragma pack(pop)
+
+
+void initHDDType() {
+    if () {
+
+    }
+}
