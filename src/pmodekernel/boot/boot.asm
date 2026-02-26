@@ -16,8 +16,19 @@ main:
     ; load kernel
     call hdd_read
 
-    mov si, text_hdd_was_read
-    call print16r
+    ; mov si, text_hdd_was_read
+    ; call print16r
+
+    call do_e820
+
+    ret_ok:
+    ; mov al, 'X'
+    ; mov ah, 0x0E
+    ; int 0x10
+
+    ; mov si, text_mmap_was_read
+    ; call print16r
+
 
     ; mov si, text16r_a20_enabled
     ; call print16r
@@ -50,13 +61,13 @@ main:
     je .a20_enabled
 
     ; print a20 failure
-    mov si, text16r_a20_disabled
-    call print16r
+    ; mov si, text16r_a20_disabled
+    ; call print16r
     hlt
 
     .a20_enabled:
-    mov si, text16r_a20_enabled
-    call print16r
+    ; mov si, text16r_a20_enabled
+    ; call print16r
 
     ; load gdt
     lgdt [gdt_descriptor]
@@ -105,12 +116,15 @@ main:
 ; Define special characters and strings to print.
 %define LF 0x0D
 %define CR 0x0A
-text16r_test: db `Real!`, LF, CR, 0
-text16r_a20_enabling: db `Enabling A20 Line...`, LF, CR, 0
-text16r_a20_disabled: db `Could not enable A20 Line`, LF, CR, 0
-text16r_a20_enabled: db `A20 Line Enabled`, LF, CR, 0
-text_hdd_was_not_read: db `Kernel not loaded into memory`, LF, CR, 0
-text_hdd_was_read: db `Kernel loaded into memory`, LF, CR, 0
+; text16r_test: db `Real!`, LF, CR, 0
+; text16r_a20_enabling: db `Enabling A20 Line...`, LF, CR, 0
+; text16r_a20_disabled: db `Could not enable A20 Line`, LF, CR, 0
+; text16r_a20_enabled: db `A20 Line Enabled`, LF, CR, 0
+; text_hdd_was_not_read: db `Kernel not loaded into memory`, LF, CR, 0
+; text_hdd_was_read: db `Kernel loaded into memory`, LF, CR, 0
+; text_mmap_was_not_read: db `Failed to read MMAP.`, LF, CR, 0
+; text_mmap_was_read: db `Loaded MMAP into memory.`, LF, CR, 0
+
 
 
 ; To move to a new line in VGA new lines, move
@@ -118,63 +132,63 @@ text_hdd_was_read: db `Kernel loaded into memory`, LF, CR, 0
 ; New lines are used on an higher level to move
 ; into correct position.
 %define VGA_TEXT_BUFFER 0xB8000
-text32p_test: db `Fake!`, 0   ; VGA, no CR/LF
+; text32p_test: db `Fake!`, 0   ; VGA, no CR/LF
 
 ;* Prints a string stored in memory to TTY.
 ;* Input:
 ;* - SI: string memory address
-print16r:
-    [bits 16]
-    push ax                                         ; Store AX
-    push bx                                         ; Store BX
-    push si                                         ; Store SI
+; print16r:
+;     [bits 16]
+;     push ax                                         ; Store AX
+;     push bx                                         ; Store BX
+;     push si                                         ; Store SI
 
-    mov ah, 0x0E                                    ; Interrupt method: 10, E: Write Character in TTY
-    mov bh, 0                                       ; Set page number used by int
-    .loop:                                          ; Loop start
-        lodsb                                       ; Load content of ds:[si] in AL, inc SI
-        test al, al                                 ; Check whether the character was NULL (last one)
-        jz .end                                     ; If it is (Z flag is set since AL is 0), exit
+;     mov ah, 0x0E                                    ; Interrupt method: 10, E: Write Character in TTY
+;     mov bh, 0                                       ; Set page number used by int
+;     .loop:                                          ; Loop start
+;         lodsb                                       ; Load content of ds:[si] in AL, inc SI
+;         test al, al                                 ; Check whether the character was NULL (last one)
+;         jz .end                                     ; If it is (Z flag is set since AL is 0), exit
 
-        int 0x10                                    ; Call int and display the character in AL
-        jmp .loop
+;         int 0x10                                    ; Call int and display the character in AL
+;         jmp .loop
 
-    .end:
-    pop si                                          ; Restore previous SI value
-    pop bx                                          ; Restore previous BX value
-    pop ax                                          ; Restore previous AX value
-    ret                                             ; If Z flag is set, return (pop ip)
+;     .end:
+;     pop si                                          ; Restore previous SI value
+;     pop bx                                          ; Restore previous BX value
+;     pop ax                                          ; Restore previous AX value
+;     ret                                             ; If Z flag is set, return (pop ip)
 
 ;* Prints a string stored in memory to TTY.
 ;* Input:
 ;* - SI: string memory address
-print32p:
-    [bits 32]
-    push eax
-    push esi                                         ; Store SI
-    push edi
+; print32p:
+;     [bits 32]
+;     push eax
+;     push esi                                         ; Store SI
+;     push edi
 
-    mov edi, VGA_TEXT_BUFFER
+;     mov edi, VGA_TEXT_BUFFER
 
-    mov ah, 0x01                                    ; Forecolor (4b) & Foreground (4b) color: Black, Green
+;     mov ah, 0x01                                    ; Forecolor (4b) & Foreground (4b) color: Black, Green
 
-    .loop:                                          ; Loop start
-        lodsb                                       ; Load content of ds:[si] in AL, inc SI
-        test al, al                                 ; Check whether the character was NULL (last one)
-        jz .end                                     ; If it is (Z flag is set since AL is 0), exit
+;     .loop:                                          ; Loop start
+;         lodsb                                       ; Load content of ds:[si] in AL, inc SI
+;         test al, al                                 ; Check whether the character was NULL (last one)
+;         jz .end                                     ; If it is (Z flag is set since AL is 0), exit
 
-        mov [edi], al                               ; Write loaded character to VGA buffer
-        inc edi                                     ; Move pointer to next byte
-        mov [edi], ah                               ; Write charcter colors to VGA buffer
-        inc edi                                     ; Move pointer to next byte
-        jmp .loop
+;         mov [edi], al                               ; Write loaded character to VGA buffer
+;         inc edi                                     ; Move pointer to next byte
+;         mov [edi], ah                               ; Write charcter colors to VGA buffer
+;         inc edi                                     ; Move pointer to next byte
+;         jmp .loop
 
-    .end:
+;     .end:
 
-    pop edi
-    pop esi                                          ; Restore previous SI value
-    pop eax
-    ret                                             ; If Z flag is set, return (pop ip)
+;     pop edi
+;     pop esi                                          ; Restore previous SI value
+;     pop eax
+;     ret                                             ; If Z flag is set, return (pop ip)
 
 ; ==== KEYBOARD CONTROLLER (PS/2 CONTROLLER) ===== ;
 ; To emulate old CPUs with 20 mem address bus (0-19)
@@ -448,12 +462,69 @@ gdt_descriptor:
     dw gdt_descriptor - gdt - 1             ; Calculate size using address offsets
     dd gdt
 
+; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
+; note: initially di is 0, be sure to set it to a value so that the BIOS code will not be overwritten. 
+;       The consequence of overwriting the BIOS code will lead to problems like getting stuck in `int 0x15`
+; inputs: es:di -> destination buffer for 24 byte entries
+; outputs: bp = entry count, trashes all registers except esi
+mmap_ent equ 0x8000             ; the number of entries will be stored at 0x8000
+
+do_e820:
+    mov di, 0x5000
+	xor ebx, ebx		; ebx = 0
+	xor bp, bp		; entry count in bp
+	mov edx, 0x0534D4150	; "SMAP"
+	mov eax, 0xe820
+	mov [es:di + 20], dword 1	; force a valid ACPI 3.X entry
+	mov ecx, 24
+	int 0x15
+	jc short .failed	; carry on first call -> unsupported function
+	mov edx, 0x0534D4150	
+	cmp eax, edx		; success = eax must have been set to "SMAP"
+	jne short .failed
+	test ebx, ebx		; ebx = 0 -> fail
+	je short .failed
+	jmp short .jmpin
+.e820lp:
+	mov eax, 0xe820		; eax, ecx get trashed on every int 0x15 call
+	mov [es:di + 20], dword 1	; force a valid ACPI 3.X entry
+	mov ecx, 24		; ask for 24 bytes again
+	int 0x15
+	jc short .e820f		; carry set means "end of list already reached"
+	mov edx, 0x0534D4150	; repair potentially trashed register
+.jmpin:
+	jcxz .skipent		; skip 0 length entries
+	cmp cl, 20		; got a 24 byte ACPI 3.X response?
+	jbe short .notext ; jmp if below or equl, 20 byte response
+	test byte [es:di + 20], 1	; if so: is the "ignore this data" bit clear?
+	je short .skipent
+.notext:
+	mov ecx, [es:di + 8]	; get lower uint32_t of memory region length
+	or ecx, [es:di + 12]	; "or" it with upper uint32_t to test for zero
+	jz .skipent		; if length uint64_t is 0, skip entry
+	inc bp			; got a good entry: ++count, move to next storage spot
+	add di, 24
+.skipent:
+	test ebx, ebx		; if ebx resets to 0, list is complete
+	jne short .e820lp
+.e820f:
+	mov [es:mmap_ent], bp	; store the entry count
+	clc			
+	ret
+.failed:
+	stc			
+	ret
+
+
+
+
 hdd_read:
+    [bits 16]
     mov ax, 0x0000
     mov es, ax              ; destination segment
     mov bx, 0x1000          ; destination offset
 
-    mov si, 5               ; number of sectors to read
+    mov si, KERN_SECTORS               ; number of sectors to read
     mov ch, 0               ; cylinder 0
     mov dh, 0               ; head 0
     mov cl, 2               ; start at sector 2
@@ -463,6 +534,7 @@ hdd_read:
     ret
 
 read_loop:
+    [bits 16]
     mov ah, 0x02            ; BIOS read
     mov al, 0x01            ; read 1 sector
     int 0x13
@@ -476,10 +548,21 @@ read_loop:
     ret
 
 disk_error:
+    [bits 16]
     ; handle error here
-    mov si, text_hdd_was_not_read
-    call print16r
+    ; mov si, text_hdd_was_not_read
+    ; call print16r
     hlt
+
+
+; mmap_err:
+;     [bits 16]
+;     mov al, 'E'
+;     mov ah, 0x0E
+;     int 0x10
+;     ; mov si, text_mmap_was_not_read
+;     ; call print16r
+;     hlt
 
 
 ; ==== PADDING AND SIGNATURE ================================================================================= ;

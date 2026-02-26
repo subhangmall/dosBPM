@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "memmgt.h"
+#include "./kmemmgt.h"
 
 #define NULL ((void*)0)
 
@@ -19,15 +19,13 @@ struct IdtPtr {
 
 #pragma pack(pop)
 
-struct InterruptDescriptor* idt;
+struct InterruptDescriptor idt[256] __attribute__((aligned(16)));
 struct IdtPtr idtr;
 
 // initialize idt variable and set cpu's idt register to point to it
-void initIDT() {
-    idt = kcalloc(sizeof(struct InterruptDescriptor)*256);
-    
+void initIDT() {   
     idtr.limit = (sizeof(struct InterruptDescriptor) * 256) - 1;
-    idtr.base = (uint32_t)idt;
+    idtr.base = (uint32_t) &idt;
     
     asm volatile (
         "lidt %0"
