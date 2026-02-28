@@ -11,5 +11,6 @@ bool addPage(uint32_t vAddr, bool shouldZero);
 void free(void* ptr);
 void premove(uint32_t vAddr);
 uint32_t virtToPhysAddr(uint32_t vAddr);
+void* allocatePhysicalRange(uint32_t physAddr, uint32_t len);
 
 #endif

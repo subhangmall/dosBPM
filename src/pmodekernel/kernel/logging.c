@@ -1,12 +1,13 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 static int cursor = 0;
-volatile char* video_memory = (volatile char*) 0xB8000;
+volatile char* videoMemory = (volatile char*) 0xB8000;
 
 void kclear() {
     for (int i = 0; i < 80*25; i++) {
-        video_memory[i*2] = ' ';
-        video_memory[i*2 + 1] = 0x0F;
+        videoMemory[i*2] = ' ';
+        videoMemory[i*2 + 1] = 0x0F;
     }
     cursor = 0;
 }
@@ -17,8 +18,8 @@ void kputc(char c) {
         return;
     }
 
-    video_memory[cursor*2] = c;
-    video_memory[cursor*2+1] = 0x0F;
+    videoMemory[cursor*2] = c;
+    videoMemory[cursor*2+1] = 0x0F;
     cursor++;
 }
 

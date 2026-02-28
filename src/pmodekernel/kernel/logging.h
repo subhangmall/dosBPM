@@ -1,7 +1,10 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef LOGGING_H
 #define LOGGING_H
+
+extern volatile char* videoMemory;
 
 void kclear();
 void kputc(char c);
