@@ -21,12 +21,14 @@
 #define MAX_REGIONS 1024
 #define PMM_UNAVAILABLE true
 #define PMM_AVAILABLE false
+#define ALIGN_DOWN(x) ((x) & ~(PAGE_SIZE - 1))
+#define ALIGN_UP(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
 static uint32_t mmioNextFree = MMIO_VIRTUAL_SPACE_BASE;
 
 uint32_t pmmAllocNextFreePage();
 void* kalloc(uint32_t numBytes);
-void* kcalloc(uint32_t numBytes);
+// void* kcalloc(uint32_t numBytes);
 bool vmmAddPage(uint32_t vAddr, bool shouldZero);
 void free(void* ptr);
 bool vmmAllocatePage(uint32_t vAddr, uint32_t physAddr, uint8_t flags);
@@ -511,10 +513,19 @@ void* kalloc(uint32_t numBytes) {
                 nextAddr += sizeof(struct KallocHeader);
                 nextAddr += current->size;
                 
+                // kprint("kalloc addr start: \n");
+                // kprint_hex(nextAddr);
+                // kprint("\nKalloc addr end; \n");
+                // kprint_hex(nextAddr + sizeof(struct KallocHeader) + numBytes);
+                // kprint("\nkalloc header size:");
+                // kprint_hex(sizeof(struct KallocHeader));
+                // kprint("\nsize\n");
+                // kprint_hex(numBytes);
+
                 // check if there is enough memory free to allocate pages between nextAddr and the end of this hypothetical kalloc
-                for (int i = nextAddr & 0b11111111111111111111000000000000; i < ((nextAddr + sizeof(struct KallocHeader) + numBytes) | 0b00000000000000000000111111111111); i+=PAGE_SIZE) {
-                    kprint("Allocating page (k): ");
-                    kprint_hex(i);
+                for (int i = ALIGN_DOWN(nextAddr); i < ALIGN_UP((nextAddr + sizeof(struct KallocHeader) + numBytes)); i+=PAGE_SIZE) {
+                    // kprint("Allocating page (k): ");
+                    // kprint_hex(i);
                     kprint("\n");
                     if (!vmmAddPage(i, false)) {
                         kprint("OUT OF MEMORY \n");
@@ -543,49 +554,13 @@ void* kalloc(uint32_t numBytes) {
 }
 
 // zeroes out memory as well
-void* kcalloc(uint32_t numBytes) {
-    if (heapStart == NULL) {
-        vmmAddPage(nextVAddrToMap, true);
-        struct KallocHeader* head = (struct KallocHeader*)nextVAddrToMap;
-        head->size = 4096-sizeof(struct KallocHeader);
-        head->isFree = true;
-        head->next = NULL;
-        heapStart = head;
-    } 
-    struct KallocHeader* current = heapStart;
-    while (current != NULL) {
-        if (!current->isFree || current->size < numBytes) {
-            // the current segment isn't going to work for the size we're trying to allocate
-            if (current->next == NULL) {
-                // if there is no next one and we couldn't find a good one before, create a new next one and allocate memory to it
-                uint32_t nextAddr = (uint32_t) current;
-                nextAddr += sizeof(struct KallocHeader);
-                nextAddr += current->size;
-                
-                // check if there is enough memory free to allocate pages between nextAddr and the end of this hypothetical kalloc
-                for (int i = nextAddr & 0b11111111111111111111000000000000; i < ((nextAddr + sizeof(struct KallocHeader) + numBytes) | 0b00000000000000000000111111111111); i+=PAGE_SIZE) {
-                    if (!vmmAddPage(i, false)) return NULL;
-                }
-                struct KallocHeader* nextHeader = (struct KallocHeader*)nextAddr;
-                *nextHeader = (struct KallocHeader) {
-                    .size = numBytes,
-                    .isFree = false,
-                    .next = NULL
-                };
-                current->next = nextHeader;
-                nextAddr += sizeof(struct KallocHeader);
-                return (void*)nextAddr;
-            }
-        } else {
-            // we find a segment that can fit
-            uint32_t kallocSegmentToReturn = (uint32_t) current;
-            current->isFree = false;
-            kallocSegmentToReturn += sizeof(struct KallocHeader);
-            return (void*) kallocSegmentToReturn;
-        }
-        current = current->next;
-    }
-}
+// void* kcalloc(uint32_t numBytes) {
+//     uint8_t* mem = kalloc(numBytes);
+//     if (mem == 0xFFFFFFFF) return mem;
+    
+//     zero
+
+// }
 
 void free(void* ptr) {
     if (ptr == NULL) return;
@@ -766,13 +741,13 @@ void* allocatePhysicalRange(uint32_t physAddr, uint32_t len) {
     uint16_t offset = physAddr & 0x00000FFF;
     uint32_t virtualStartAddr = mmioNextFree;
 
-    for (int i = physAddr & 0xFFFFF000; i < ((physAddr + len) | 0x00000FFF); i += 4096) {
+    for (int i = ALIGN_DOWN(physAddr); i < ALIGN_UP(physAddr + len); i += 4096) {
         pmmSet(i, PMM_UNAVAILABLE);
         vmmAllocatePage(mmioNextFree, i, VMM_MMIO);
         mmioNextFree += 4096;
     }
 
-    return (uint32_t*)(mmioNextFree + offset);
+    return (uint32_t*)(virtualStartAddr + offset);
 }
 
 void deallocatePhysicalRange(uint32_t vAddr, uint32_t len) {

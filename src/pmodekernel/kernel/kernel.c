@@ -1,6 +1,8 @@
 #include "./kmemmgt.h"
 #include "./logging.h"
 
+// volatile char* videoMemory;
+
 void kentry(void) {
     kclear();
 
@@ -10,7 +12,7 @@ void kentry(void) {
 
 
     kprint("Kalloc start \n");
-    char* j = (char*) kalloc(50000);
+    char* j = (char*) kalloc(5000);
     // kprint()
     kprint("Kalloc end \n");
     // kprint_hex((uint32_t) j);
@@ -31,13 +33,17 @@ void kentry(void) {
     // test kalloc (works :D)
     for (int i = 0; i < 5000; i++) {
         j[i] = 'A';
-        kprint_hex(j[i]);
+        // kprint_hex(j[i]);
     }
 
+    char* b = kalloc(1000);
 
     // kprint("Variable j declared and initialized!\n");
 
     free(j);
+    free(b);
+
+    char* c = kalloc(10000);
 
     // kprint("Variable j freed!\n");
 
@@ -58,8 +64,11 @@ void kentry(void) {
 
     // Halt the CPU so it doesn't execute garbage memory
     uint8_t* vRAM = allocatePhysicalRange(0xB8000, 100);
-    // vRAM[0] = '1';
-    // vRAM[1] = 0xFF; 
+    kprint_hex(virtToPhysAddr((uint32_t) vRAM));
+    
+    videoMemory = vRAM;
+    // kclear();
+    kprint("\nReloaded video memory to use virtual address \n");
 
     while(1) {
         __asm volatile ("hlt");
