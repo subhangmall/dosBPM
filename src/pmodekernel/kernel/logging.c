@@ -13,6 +13,9 @@ void kclear() {
 }
 
 void kputc(char c) {
+    if (cursor == 80 * 25) {
+        kclear();
+    }
     if (c == '\n') {
         cursor = (cursor / 80 + 1) * 80;
         return;
