@@ -542,6 +542,14 @@ read_loop:
 
     add bx, 512             ; next memory location
     inc cl                  ; next sector
+    cmp cl, 18
+    jle noSectorOverflow
+
+    ; ; if theres a sector overflwo
+    inc dh
+    mov cl, 0x01
+
+    noSectorOverflow: 
     dec si
     jnz read_loop
 
@@ -549,6 +557,14 @@ read_loop:
 
 disk_error:
     [bits 16]
+
+    mov edi, 0xB8000     ; start of VGA text memory
+
+    ; Write character 'A' in green on black
+    mov al, 'I'          ; ASCII 'A'
+    mov ah, 0x02         ; attribute byte: black background, green foreground
+    mov [edi], ax        ; write both bytes
+
     ; handle error here
     ; mov si, text_hdd_was_not_read
     ; call print16r

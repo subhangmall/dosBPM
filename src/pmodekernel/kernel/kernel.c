@@ -1,6 +1,7 @@
 #include "./kmemmgt.h"
 #include "./logging.h"
 #include "./idt.h"
+#include "./pic.h"
 
 // volatile char* videoMemory;
 
@@ -57,7 +58,7 @@ void kentry(void) {
     
     // video_memory[3] = 0x0F;
 
-
+    // setIDTHandler(0xFF, (uint32_t) peepeepoopoo);
     // // k
     // video_memory[4] = 'P'; 
     
@@ -71,8 +72,10 @@ void kentry(void) {
     // kclear();
     kprint("\nReloaded video memory to use virtual address \n");
 
+    kprint_hex((uint32_t) vRAM);
+
     initIDTStructures();
-    initIDT();
+    enableIDT();
     asm volatile (
         "int $0x02\n\t"
         :
@@ -80,7 +83,32 @@ void kentry(void) {
         :
     );
 
-    kprint_hex(1/0);
+    asm volatile (
+        "int $0x00\n\t"
+        :
+        :
+        :
+    );
+
+    asm volatile (
+        "int $0xFF\n\t"
+        :
+        :
+        :
+    );
+
+    // kprint_hex(1/0);
+
+    initPIC(0x20, 0x28);
+
+    asm volatile (
+        "sti"
+        :
+        :
+        :
+    );
+
+    // kprint_hex(1/0);
 
     while(1) {
         __asm volatile ("hlt");
