@@ -2,6 +2,7 @@
 #include "./logging.h"
 #include "./idt.h"
 #include "./pic.h"
+#include "./basicInterruptHandlers.h"
 
 // volatile char* videoMemory;
 
@@ -75,6 +76,9 @@ void kentry(void) {
     kprint_hex((uint32_t) vRAM);
 
     initIDTStructures();
+
+    setIDTHandler(0, (uint32_t) divByZeroException);
+
     enableIDT();
     // asm volatile (
     //     "int $0x02\n\t"
@@ -101,7 +105,7 @@ void kentry(void) {
 
     initPIC(0x20, 0x28);
 
-    enableExternalInterrupts();
+    // enableExternalInterrupts();
     // disableExternalInterrupts();
 
     // kprint_hex(1/0);
@@ -110,12 +114,7 @@ void kentry(void) {
     //     // kprint("HI");
     // }
 
-    asm volatile (
-        "int $0x23"
-        :
-        :
-        :
-    );
+    kprint_hex(1/0);
 
     while(1) {
         __asm volatile ("hlt");

@@ -1,3 +1,5 @@
+; NOTE: credit to https://github.com/Cotezzo/asm-protected-mode/ for the basic outline
+
 ; ==== MEMORY AND ARCH DIRECTIVES ============================================================================ ;
 org 0x7c00
 bits 16
@@ -79,7 +81,7 @@ main:
     mov ss, ax
     mov esp, 0x90000   ; safe stack for 32-bit code
 
-    mov edi, 0xB8000     ; start of VGA text memory
+    ; mov edi, 0xB8000     ; start of VGA text memory
 
     ; Write character 'A' in green on black
     ; mov al, 'I'          ; ASCII 'A'
@@ -102,8 +104,8 @@ main:
 ; - a20_enable
 ; ==== PRINT ===================================== ;
 ; Define special characters and strings to print.
-%define LF 0x0D
-%define CR 0x0A
+; %define LF 0x0D
+; %define CR 0x0A
 ; text16r_test: db `Real!`, LF, CR, 0
 ; text16r_a20_enabling: db `Enabling A20 Line...`, LF, CR, 0
 ; text16r_a20_disabled: db `Could not enable A20 Line`, LF, CR, 0
@@ -540,7 +542,7 @@ disk_error:
 
     mov edi, 0xB8000     ; start of VGA text memory
 
-    ; Write character 'A' in green on black
+    ; Write character 'A' in green on black, TO SHOW AN ERROR
     mov al, 'I'          ; ASCII 'A'
     mov ah, 0x02         ; attribute byte: black background, green foreground
     mov [edi], ax        ; write both bytes

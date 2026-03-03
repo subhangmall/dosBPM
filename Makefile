@@ -22,8 +22,8 @@ $(TMP)/boot.bin: $(BOOT)/boot.asm $(TMP)/kernel.bin | $(TMP)
 $(TMP)/kernel.bin: $(TMP)/kernel.elf
 	objcopy -O binary $(TMP)/kernel.elf $(TMP)/kernel.bin
 
-$(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(KERNEL)/linker.ld 
-	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/iolibrary.o $(TMP)/pic.o
+$(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
+	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o
 
 $(TMP)/kernel.o: $(KERNEL)/kernel.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
@@ -42,6 +42,10 @@ $(TMP)/pic.o: $(KERNEL)/pic.c | $(TMP)
 
 $(TMP)/iolibrary.o: $(KERNEL)/iolibrary.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
+$(TMP)/basicInterruptHandlers.o: $(KERNEL)/basicInterruptHandlers.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
 
 $(TMP)/intHandlers.o: $(KERNEL)/intHandlers.asm | $(TMP)
 	nasm -f elf32 $< -o $@
