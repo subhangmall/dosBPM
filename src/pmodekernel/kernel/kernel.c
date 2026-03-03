@@ -101,14 +101,14 @@ void kentry(void) {
 
     initPIC(0x20, 0x28);
 
-    asm volatile (
-        "sti"
-        :
-        :
-        :
-    );
+    enableExternalInterrupts();
+    // disableExternalInterrupts();
 
     // kprint_hex(1/0);
+
+    while (1) {
+        kprint("HI");
+    }
 
     while(1) {
         __asm volatile ("hlt");

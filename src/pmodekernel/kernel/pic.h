@@ -5,5 +5,6 @@
 
 void initPIC(uint8_t masterOffset, uint8_t slaveOffset);
 void disablePIC(void);
+void defaultPICHandler(uint32_t* stack);
 
 #endif

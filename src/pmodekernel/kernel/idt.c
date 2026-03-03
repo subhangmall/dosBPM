@@ -596,3 +596,21 @@ void enableIDT() {
         : 
     );
 }
+
+void enableExternalInterrupts() {
+    asm volatile (
+        "sti"
+        :
+        :
+        :
+    );
+}
+
+void disableExternalInterrupts() {
+    asm volatile (
+        "cli"
+        :
+        :
+        :
+    );
+}

@@ -7,5 +7,8 @@ void enableIDT();
 void setIDTHandler(uint8_t intNum, uint32_t address);
 void setIDTValue(uint8_t intNum, uint32_t address, uint8_t attr, uint16_t selector);
 void initIDTStructures();
+void enableExternalInterrupts();
+void disableExternalInterrupts();
+
 
 #endif

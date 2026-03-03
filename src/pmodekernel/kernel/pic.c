@@ -1,6 +1,8 @@
-// THANKS TO THE OS DEV WIKI for help in remapping
+// THANKS TO THE OS DEV WIKI for help in programming the PIC functions
 #include <stdint.h>
 #include "./iolibrary.h"
+#include "./logging.h"
+#include "./idt.h"
 
 #define PIC1		0x20		/* IO base address for master PIC */
 #define PIC2		0xA0		/* IO base address for slave PIC */
@@ -8,6 +10,7 @@
 #define PIC1_DATA	(PIC1+1)
 #define PIC2_COMMAND	PIC2
 #define PIC2_DATA	(PIC2+1)
+#define PIC_EOI 0x20
 
 #define ICW1_ICW4	0x01		/* Indicates that ICW4 will be present */
 #define ICW1_SINGLE	0x02		/* Single (cascade) mode */
@@ -23,7 +26,23 @@
 
 #define CASCADE_IRQ 2
 
-void initPIC(uint8_t masterOffset, uint8_t slaveOffset) {
+uint8_t masterOffset;
+uint8_t slaveOffset;
+
+void defaultPICHandler(uint32_t* stack);
+
+void initPIC(uint8_t mOffset, uint8_t sOffset) {
+	masterOffset = mOffset;
+	slaveOffset = sOffset;
+
+	for (int i = masterOffset; i < masterOffset+8; i++) {
+		setIDTHandler(i, (uint32_t) defaultPICHandler);
+	}
+
+	for (int i = slaveOffset; i < slaveOffset+8; slaveOffset++) {
+		setIDTHandler(i, (uint32_t) defaultPICHandler);
+	}
+
     outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);  // starts the initialization sequence (in cascade mode)
 	ioWait();
 	outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
@@ -50,4 +69,20 @@ void initPIC(uint8_t masterOffset, uint8_t slaveOffset) {
 void disablePIC(void) {
     outb(PIC1_DATA, 0xff);
     outb(PIC2_DATA, 0xff);
+}
+
+void sendEOIToPIC(uint8_t irq) {
+	if (irq >= 8)
+		outb(PIC2_COMMAND, PIC_EOI);
+	outb(PIC1_COMMAND, PIC_EOI);
+}
+
+void defaultPICHandler(uint32_t* stack) {
+	kprint("Uninitialized PIC interrupt ");
+    kprint_hex(stack[12]);
+    kprint("\n");
+
+	uint8_t irqNum = stack[12] - 20;
+	sendEOIToPIC(irqNum);
+    return;
 }
