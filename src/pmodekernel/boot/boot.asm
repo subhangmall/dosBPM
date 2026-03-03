@@ -33,16 +33,6 @@ main:
     ; mov si, text16r_a20_enabled
     ; call print16r
 
-    ; ==== SWITCH TO 32BIT PROTECTED MODE ==================================================================== ;
-    ; Necessary steps to switch from 16rm to 32pm:
-    ; - Disable interrupts
-    ; - Enable A20 Line (if disabled)
-    ; - Load GDT
-    ; - Enable Protected Mode in the CPU
-    ; - Setup segment registers (+ far jump)
-    ; https://wiki.osdev.org/Protected_Mode
-    ; https://www.intel.com/content/dam/support/us/en/documents/processors/pentium4/sb/25366821.pdf (9.9)
-
     ; clear
     ; ==== SWITCH TO 32BIT PROTECTED MODE ==================================================================== ;
     cli
@@ -53,8 +43,6 @@ main:
 
     ; if A20 is disabled, enable it and check again
     je .a20_enabled
-    ; mov si, text16r_a20_enabling
-    ; call print16r
     call a20_enable
     call a20_check
     cmp ax, 1
@@ -390,41 +378,16 @@ ps2_wait_obuf_full:
     ; If the buffer is full, return
     ret
 
-
-; ==== GLOBAL DESCRIPTOR TABLE (GDT) ============= ;
-; In protected mode, segments are no longer used to
-; access different memory banks, but to section
-; memory in different parts, describing each with
-; its purpose and required access levels.
-; The GDT entries are 8 byte long, and describe
-; these segments with an exact structure.
-; https://wiki.osdev.org/Global_Descriptor_Table
-; Base: segment start address (32 bits)
-; Limit: segment length (20 bits)
-; For flat memory model: base=0, limit=max mem addr
-; There's no space for a 32bit limit, but we can use
-; a flag ("granularity") which specifies the size of
-; the memory blocks (1B or 4kB = 4096B = 2**10).
-; Actually, the flag shifts the limit value to the
-; left inserting 12 bits set to 1 (0x0 -> 0x0FFF).
-; 0x000FFFFF + G flag = 0xFFFFFFFF --> 32bit limit
-
-; Used GDT instructions / registers:
-; - gdtr --> register that stores GDT's address
-; - lgdt operand --> loads GDT's address to GDTR
-;       given the GDT descriptor address
-
-; Create GDT entries that we'll store and use
 gdt:
     ; 1st entry: must be empty
-    dq 0
+    dq 0 ; NULL DESC
 
     ; 2nd entry: 32b code segment, flat memory model
 .gdt_selector_32pm_cs:
     dw 0xFFFF                                       ; Limit (0-15 bits)
     dw 0                                            ; Base (0-15 bits)
     db 0                                            ; Base (16-23 bits)
-    db 1_00_1_1_0_1_0b                              ; Access Byte (reversed in little endian), left to right:
+    db 1001101_0b                              ; Access Byte (reversed in little endian), left to right:
                                                     ; Present Bit, always 1 for a valid segment
                                                     ; Privilege (2b): privilige level required (Ring 0, 1, 2, 3)
                                                     ; Type: 0 for system segment, 1 for code or data segment
@@ -439,7 +402,7 @@ gdt:
                                                     ; RW (code segments): 1 enables read (write never allowed)
                                                     ;    (data segments): 1 enables write (read always allowed)
                                                     ; Accessed: set by CPU when segment is accessed
-    db 1_1_0_0_1111b                                ; Flags (reversed in little endian), left to right:
+    db 11001111b                                ; Flags (reversed in little endian), left to right:
                                                     ; Granularity: 1 to shl the limit value (with 1s, not 0s)
                                                     ; Size: 0 for 16b protected mode, 1 for 32b protected mode
                                                     ; Long-Mode: 1 for 64b protected mode (Size must be 0)
@@ -451,9 +414,28 @@ gdt:
     dw 0xFFFF
     dw 0
     db 0
-    db 1_00_1_0_0_1_0b                              ; Like 32bit code segment, but Executable bit set to 0
-    db 1_1_0_0_1111b
+    db 10010010b                              ; access byte
+    db 11001111b
     db 0
+
+; 4th entry: 32bit user mode code semgents
+.gdt_selector_32pm_user_cs:
+    dw 0xFFFF
+    dw 0
+    db 0
+    db 0xFA ; access byte                             
+    db 11001111b
+    db 0
+
+; 5th entry 32 bit user mode data segments
+.gdt_selector_32pm_user_ds:
+    dw 0xFFFF
+    dw 0
+    db 0
+    db 0xF2 ; access byte                             
+    db 11001111b
+    db 0
+
 
 ; In order to load GDT, another structure is
 ; requried: the GDT descriptor.
@@ -462,11 +444,9 @@ gdt_descriptor:
     dw gdt_descriptor - gdt - 1             ; Calculate size using address offsets
     dd gdt
 
-; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
-; note: initially di is 0, be sure to set it to a value so that the BIOS code will not be overwritten. 
-;       The consequence of overwriting the BIOS code will lead to problems like getting stuck in `int 0x15`
-; inputs: es:di -> destination buffer for 24 byte entries
-; outputs: bp = entry count, trashes all registers except esi
+
+; CREDIT TO THE OS DEV WIKI AS I AM USING THIS
+; E280 BIOS MAP BECAUSE MINE DIDN'T CATCH ALL OF THE EDGE CASES
 mmap_ent equ 0x8000             ; the number of entries will be stored at 0x8000
 
 do_e820:

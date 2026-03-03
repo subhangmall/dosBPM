@@ -1,4 +1,4 @@
-// THANKS TO THE OS DEV WIKI for help in programming the PIC functions
+// THANKS TO THE OS DEV WIKI for help in programming the PIC init, disable, and eoi functions
 #include <stdint.h>
 #include "./iolibrary.h"
 #include "./logging.h"
@@ -30,18 +30,33 @@ uint8_t masterOffset;
 uint8_t slaveOffset;
 
 void defaultPICHandler(uint32_t* stack);
+uint8_t irqNumToIntNum(uint8_t irqNum);
+
+bool linkIRQHandler(uint8_t irqNum, uint32_t address) {
+	if (irqNumToIntNum(irqNum) == 0x00) {
+		return false;
+	}
+	setIDTHandler(irqNumToIntNum(irqNum), address);
+}
 
 void initPIC(uint8_t mOffset, uint8_t sOffset) {
 	masterOffset = mOffset;
 	slaveOffset = sOffset;
 
-	for (int i = masterOffset; i < masterOffset+8; i++) {
-		setIDTHandler(i, (uint32_t) defaultPICHandler);
+	// kprint("INIT PIC SLAVE OFFSET");
+	// kprint_hex(slaveOffset);
+
+	for (int i = 0; i < 16; i++) {
+		linkIRQHandler(i, (uint32_t) defaultPICHandler);
 	}
 
-	for (int i = slaveOffset; i < slaveOffset+8; slaveOffset++) {
-		setIDTHandler(i, (uint32_t) defaultPICHandler);
-	}
+	// for (int i = masterOffset; i < masterOffset+8; i++) {
+	// 	setIDTHandler(i, (uint32_t) defaultPICHandler);
+	// }
+
+	// for (int i = slaveOffset; i < slaveOffset+8; i++) {
+	// 	setIDTHandler(i, (uint32_t) defaultPICHandler);
+	// }
 
     outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);  // starts the initialization sequence (in cascade mode)
 	ioWait();
@@ -77,12 +92,31 @@ void sendEOIToPIC(uint8_t irq) {
 	outb(PIC1_COMMAND, PIC_EOI);
 }
 
+uint8_t intNumToIRQNum(uint8_t intNum) {
+	if (intNum >= masterOffset && intNum < masterOffset + 8) {
+		return intNum - masterOffset;
+	} else if (intNum >= slaveOffset && intNum < slaveOffset + 8) {
+		return intNum - slaveOffset + 8;
+	} else {
+		return 0xFF; // error code
+	}
+}
+
+uint8_t irqNumToIntNum(uint8_t irqNum) {
+	if (irqNum > 0xFF) return 0x00; // error code
+	
+	if (irqNum >= 8) {
+		return slaveOffset + irqNum - 8;
+	} else {
+		return masterOffset + irqNum;
+	}
+}
+
 void defaultPICHandler(uint32_t* stack) {
 	kprint("Uninitialized PIC interrupt ");
-    kprint_hex(stack[12]);
+    kprint_hex(intNumToIRQNum(stack[12]));
     kprint("\n");
 
-	uint8_t irqNum = stack[12] - 20;
-	sendEOIToPIC(irqNum);
+	sendEOIToPIC(intNumToIRQNum(stack[12]));
     return;
 }

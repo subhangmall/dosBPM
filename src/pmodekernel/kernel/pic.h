@@ -3,7 +3,7 @@
 #ifndef PIC_H
 #define PIC_H
 
-void initPIC(uint8_t masterOffset, uint8_t slaveOffset);
+void initPIC(uint8_t mOffset, uint8_t sOffset);
 void disablePIC(void);
 void defaultPICHandler(uint32_t* stack);
 

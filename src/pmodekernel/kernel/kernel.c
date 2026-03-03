@@ -26,11 +26,11 @@ void kentry(void) {
     kprint("\nPhysical address: ");
     kprint_hex(virtToPhysAddr((uint32_t) j));
 
-    // kprint("\n");
-    // kprint("Virtual address C: ");
-    // kprint_hex(0xC0000001);
-    // kprint("\nPhysical address C: ");
-    // kprint_hex(virtToPhysAddr(0xC0000001));
+    kprint("\n");
+    kprint("Virtual address C: ");
+    kprint_hex(0xC0000001);
+    kprint("\nPhysical address C: ");
+    kprint_hex(virtToPhysAddr(0xC0000001));
 
     // test kalloc (works :D)
     for (int i = 0; i < 5000; i++) {
@@ -40,14 +40,14 @@ void kentry(void) {
 
     char* b = kalloc(1000);
 
-    // kprint("Variable j declared and initialized!\n");
+    kprint("Variable j declared and initialized!\n");
 
     free(j);
     free(b);
 
     char* c = kalloc(10000);
 
-    // kprint("Variable j freed!\n");
+    kprint("Variable j freed!\n");
 
     // video_memory[2] = 'J'; 
     
@@ -76,26 +76,26 @@ void kentry(void) {
 
     initIDTStructures();
     enableIDT();
-    asm volatile (
-        "int $0x02\n\t"
-        :
-        :
-        :
-    );
+    // asm volatile (
+    //     "int $0x02\n\t"
+    //     :
+    //     :
+    //     :
+    // );
 
-    asm volatile (
-        "int $0x00\n\t"
-        :
-        :
-        :
-    );
+    // asm volatile (
+    //     "int $0x00\n\t"
+    //     :
+    //     :
+    //     :
+    // );
 
-    asm volatile (
-        "int $0xFF\n\t"
-        :
-        :
-        :
-    );
+    // asm volatile (
+    //     "int $0xFF\n\t"
+    //     :
+    //     :
+    //     :
+    // );
 
     // kprint_hex(1/0);
 
@@ -106,9 +106,16 @@ void kentry(void) {
 
     // kprint_hex(1/0);
 
-    while (1) {
-        kprint("HI");
-    }
+    // while (1) {
+    //     // kprint("HI");
+    // }
+
+    asm volatile (
+        "int $0x23"
+        :
+        :
+        :
+    );
 
     while(1) {
         __asm volatile ("hlt");
