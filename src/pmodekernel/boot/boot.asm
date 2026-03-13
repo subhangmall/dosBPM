@@ -7,6 +7,11 @@ bits 16
 ; ==== BOOTLOADER MAIN ======================================================================================= ;
 main:
     [bits 16]
+    mov edi, 0xB8002
+
+    mov ax, 'A'         ; ASCII 'A'
+    mov ah, 0xF0       ; attribute byte: black background, green foreground
+    mov [edi], ax        ; write both bytes
 
     ; Setup segment registers and stack pointer
     mov ax, 0
@@ -17,6 +22,12 @@ main:
 
     ; load kernel
     call hdd_read
+
+    mov edi, 0xB8002
+
+    mov ax, 'B'         ; ASCII 'A'
+    mov ah, 0xF0       ; attribute byte: black background, green foreground
+    mov [edi], ax        ; write both bytes
 
     ; mov si, text_hdd_was_read
     ; call print16r
@@ -67,6 +78,12 @@ main:
     or al, 1
     mov cr0, eax
 
+    mov edi, 0xB8002
+
+    mov ax, 'C'         ; ASCII 'A'
+    mov ah, 0xF0       ; attribute byte: black background, green foreground
+    mov [edi], ax        ; write both bytes
+
     ; far jump to 32-bit code segment
     jmp 0x08:.32pm
 
@@ -81,14 +98,26 @@ main:
     mov ss, ax
     mov esp, 0x90000   ; safe stack for 32-bit code
 
+    mov edi, 0xB8002
+
+    mov ax, 'D'         ; ASCII 'A'
+    mov ah, 0xF0       ; attribute byte: black background, green foreground
+    mov [edi], ax    
+
     ; mov edi, 0xB8000     ; start of VGA text memory
 
-    ; Write character 'A' in green on black
+    ; ; Write character 'A' in green on black
     ; mov al, 'I'          ; ASCII 'A'
     ; mov ah, 0x02         ; attribute byte: black background, green foreground
     ; mov [edi], ax        ; write both bytes
 
     jmp 0x08:0x00001000
+
+    ; mov edi, 0xB8002
+
+    ; mov ax, 'E'         ; ASCII 'A'
+    ; mov ah, 0xF0       ; attribute byte: black background, green foreground
+    ; mov [edi], ax    
 
     ; ==== LOOP FOREVER ===================================================================== ;
     .loop:
@@ -502,6 +531,14 @@ do_e820:
 
 hdd_read:
     [bits 16]
+
+   mov edi, 0xB8000     ; start of VGA text memory
+
+    ; Write character 'A' in green on black, TO SHOW AN ERROR
+    mov ax, KERN_SECTORS          ; ASCII 'A'
+    mov ah, 0xF0        ; attribute byte: black background, green foreground
+    mov [edi], ax        ; write both bytes
+
     mov ax, 0x0000
     mov es, ax              ; destination segment
     mov bx, 0x1000          ; destination offset
@@ -511,40 +548,57 @@ hdd_read:
     mov dh, 0               ; head 0
     mov cl, 2               ; start at sector 2
 
-    call read_loop
-
-    ret
-
-read_loop:
-    [bits 16]
     mov ah, 0x02            ; BIOS read
-    mov al, 0x01            ; read 1 sector
+    ; mov al, KERN_SECTORS  
+    mov al, 43
+    ; add al, 10      ; FOR TESTING    ; read 1 sector
     int 0x13
-    jc disk_error           ; carry flag = error
+    jc disk_error
 
-    add bx, 512             ; next memory location
-    inc cl                  ; next sector
-    cmp cl, 18
-    jle noSectorOverflow
+    ; mov edi, 0xB8000 ; FOR VRAM PURPOSES
 
-    ; ; if theres a sector overflwo
-    inc dh
-    mov cl, 0x01
-
-    noSectorOverflow: 
-    dec si
-    jnz read_loop
+    ; call read_loop
 
     ret
+
+; read_loop:
+;     [bits 16]
+;     mov ah, 0x02            ; BIOS read
+;     mov al, 0x01            ; read 1 sector
+;     int 0x13
+;     jc disk_error           ; carry flag = error
+
+;     mov ax, 'A'         ; ASCII 'A'
+;     mov ah, 0xF0       ; attribute byte: black background, green foreground
+;     mov [edi], ax        ; write both bytes
+;     inc edi
+;     inc edi
+
+;     add bx, 512             ; next memory location
+;     inc cl                  ; next sector
+;     cmp cl, 18
+;     jle noSectorOverflow
+
+;     ; ; if theres a sector overflwo
+;     inc dh
+;     mov cl, 0x01
+
+;     noSectorOverflow: 
+;     dec si
+;     jnz read_loop
+
+;     ret
 
 disk_error:
     [bits 16]
 
-    mov edi, 0xB8000     ; start of VGA text memory
+    mov edi, 0xB8002     ; start of VGA text memory
 
-    ; Write character 'A' in green on black, TO SHOW AN ERROR
-    mov al, 'I'          ; ASCII 'A'
-    mov ah, 0x02         ; attribute byte: black background, green foreground
+    ; ; Write character 'A' in green on black, TO SHOW AN ERROR
+    ; mov si, 'A'
+    
+    mov ax, 'A'         ; ASCII 'A'
+    mov ah, 0xF0       ; attribute byte: black background, green foreground
     mov [edi], ax        ; write both bytes
 
     ; handle error here

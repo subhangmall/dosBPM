@@ -1,15 +1,19 @@
 #include <stdint.h>
-#include "./kmemmgt.h"
+#include "./memory/kmemmgt.h"
 #include "./logging.h"
 
 #define NULL ((void*)0)
+#define ISR(n) int##n
+
+// NOTE ORIGINALLY IT WAS #PRAGMA(PUSH,1)
 
 #pragma pack(push, 1)
+
 struct InterruptDescriptor {
    uint16_t offset1;        // offset bits 0..15
    uint16_t selector;        // a code segment selector in GDT or LDT
    uint8_t  zero;            // unused, set to 0
-   uint8_t  type_attributes; // gate type, dpl, and p fields
+   uint8_t  typeAttributes; // gate type, dpl, and p fields
    uint16_t offset2;        // offset bits 16..31
 };
 
@@ -279,7 +283,40 @@ extern void intFD(void);
 extern void intFE(void);
 extern void intFF(void);
 
-void (*idtRequestDispatchers[256])(void);
+void (*idtRequestDispatchers[256])(void) = {
+    int0,int1,int2,int3,int4,int5,int6,int7,
+    int8,int9,intA,intB,intC,intD,intE,NULL,   // 0x0–0xF, skip 0xF
+    int10,int11,int12,int13,int14,int15,int16,int17,
+    int18,int19,int1A,int1B,int1C,int1D,int1E,int1F,
+    int20,int21,int22,int23,int24,int25,int26,int27,
+    int28,int29,int2A,int2B,int2C,int2D,int2E,int2F,
+    int30,int31,int32,int33,int34,int35,int36,int37,
+    int38,int39,int3A,int3B,int3C,int3D,int3E,int3F,
+    int40,int41,int42,int43,int44,int45,int46,int47,
+    int48,int49,int4A,int4B,int4C,int4D,int4E,int4F,
+    int50,int51,int52,int53,int54,int55,int56,int57,
+    int58,int59,int5A,int5B,int5C,int5D,int5E,int5F,
+    int60,int61,int62,int63,int64,int65,int66,int67,
+    int68,int69,int6A,int6B,int6C,int6D,int6E,int6F,
+    int70,int71,int72,int73,int74,int75,int76,int77,
+    int78,int79,int7A,int7B,int7C,int7D,int7E,int7F,
+    int80,int81,int82,int83,int84,int85,int86,int87,
+    int88,int89,int8A,int8B,int8C,int8D,int8E,int8F,
+    int90,int91,int92,int93,int94,int95,int96,int97,
+    int98,int99,int9A,int9B,int9C,int9D,int9E,int9F,
+    intA0,intA1,intA2,intA3,intA4,intA5,intA6,intA7,
+    intA8,intA9,intAA,intAB,intAC,intAD,intAE,intAF,
+    intB0,intB1,intB2,intB3,intB4,intB5,intB6,intB7,
+    intB8,intB9,intBA,intBB,intBC,intBD,intBE,intBF,
+    intC0,intC1,intC2,intC3,intC4,intC5,intC6,intC7,
+    intC8,intC9,intCA,intCB,intCC,intCD,intCE,intCF,
+    intD0,intD1,intD2,intD3,intD4,intD5,intD6,intD7,
+    intD8,intD9,intDA,intDB,intDC,intDD,intDE,intDF,
+    intE0,intE1,intE2,intE3,intE4,intE5,intE6,intE7,
+    intE8,intE9,intEA,intEB,intEC,intED,intEE,intEF,
+    intF0,intF1,intF2,intF3,intF4,intF5,intF6,intF7,
+    intF8,intF9,intFA,intFB,intFC,intFD,intFE,intFF
+};
 void (*idtRequestHandlers[256])(uint32_t*);
 
 void setIDTValue(uint8_t intNum, uint32_t address, uint8_t attr, uint16_t selector);
@@ -291,262 +328,276 @@ void setIDTHandler(uint8_t intNum, uint32_t address) {
 
 // initialize idt variable and set cpu's idt register to point to it
 void initIDTStructures() {   
-    idtRequestDispatchers[0] = int0;
-    idtRequestDispatchers[1] = int1;
-    idtRequestDispatchers[2] = int2;
-    idtRequestDispatchers[3] = int3;
-    idtRequestDispatchers[4] = int4;
-    idtRequestDispatchers[5] = int5;
-    idtRequestDispatchers[6] = int6;
-    idtRequestDispatchers[7] = int7;
-    idtRequestDispatchers[8] = int8;
-    idtRequestDispatchers[9] = int9;
-    idtRequestDispatchers[10] = intA;
-    idtRequestDispatchers[11] = intB;
-    idtRequestDispatchers[12] = intC;
-    idtRequestDispatchers[13] = intD;
-    idtRequestDispatchers[14] = intE;
+    // void (*idtRequestHandlers[256])(uint32_t*);
+    
+    // kprint_hex((uint32_t) &idtRequestDispatchers);
+    // kprint_hex((uint32_t) &idtRequestHandlers);
+    kprint_hex((uint32_t) &idtRequestDispatchers);
+
+
+    // for (int i = 0; i < 256; i++) {
+    //     // *(uint64_t*)(idtRequestDispatchers + (4*i)) = 0x1111111111111111;
+    //     kprint_hex64(*(uint64_t*)(idtRequestDispatchers + (4*i)));
+    // }
+
+    // *(uint64_t*)(idtRequestDispatchers + (8*15)) = 0x1111111111111111;
+
+    // idtRequestDispatchers[0] = int0;
+    // idtRequestDispatchers[1] = int1;
+    // idtRequestDispatchers[2] = int2;
+    // idtRequestDispatchers[3] = int3;
+    // idtRequestDispatchers[4] = int4;
+    // idtRequestDispatchers[5] = int5;
+    // idtRequestDispatchers[6] = int6;
+    // idtRequestDispatchers[7] = int7;
+    // idtRequestDispatchers[8] = int8;
+    // idtRequestDispatchers[9] = int9;
+    // idtRequestDispatchers[10] = intA;
+    // idtRequestDispatchers[11] = intB;
+    // idtRequestDispatchers[12] = intC;
+    // idtRequestDispatchers[13] = intD;
+    // idtRequestDispatchers[14] = intE;
     // idtRequestDispatchers[15] = intF; SKIP F; RESERVED
-    idtRequestDispatchers[16] = int10;
-    idtRequestDispatchers[17] = int11;
-    idtRequestDispatchers[18] = int12;
-    idtRequestDispatchers[19] = int13;
-    idtRequestDispatchers[20] = int14;
-    idtRequestDispatchers[21] = int15;
-    idtRequestDispatchers[22] = int16;
-    idtRequestDispatchers[23] = int17;
-    idtRequestDispatchers[24] = int18;
-    idtRequestDispatchers[25] = int19;
-    idtRequestDispatchers[26] = int1A;
-    idtRequestDispatchers[27] = int1B;
-    idtRequestDispatchers[28] = int1C;
-    idtRequestDispatchers[29] = int1D;
-    idtRequestDispatchers[30] = int1E;
-    idtRequestDispatchers[31] = int1F;
-    idtRequestDispatchers[32] = int20;
-    idtRequestDispatchers[33] = int21;
-    idtRequestDispatchers[34] = int22;
-    idtRequestDispatchers[35] = int23;
-    idtRequestDispatchers[36] = int24;
-    idtRequestDispatchers[37] = int25;
-    idtRequestDispatchers[38] = int26;
-    idtRequestDispatchers[39] = int27;
-    idtRequestDispatchers[40] = int28;
-    idtRequestDispatchers[41] = int29;
-    idtRequestDispatchers[42] = int2A;
-    idtRequestDispatchers[43] = int2B;
-    idtRequestDispatchers[44] = int2C;
-    idtRequestDispatchers[45] = int2D;
-    idtRequestDispatchers[46] = int2E;
-    idtRequestDispatchers[47] = int2F;
-    idtRequestDispatchers[48] = int30;
-    idtRequestDispatchers[49] = int31;
-    idtRequestDispatchers[50] = int32;
-    idtRequestDispatchers[51] = int33;
-    idtRequestDispatchers[52] = int34;
-    idtRequestDispatchers[53] = int35;
-    idtRequestDispatchers[54] = int36;
-    idtRequestDispatchers[55] = int37;
-    idtRequestDispatchers[56] = int38;
-    idtRequestDispatchers[57] = int39;
-    idtRequestDispatchers[58] = int3A;
-    idtRequestDispatchers[59] = int3B;
-    idtRequestDispatchers[60] = int3C;
-    idtRequestDispatchers[61] = int3D;
-    idtRequestDispatchers[62] = int3E;
-    idtRequestDispatchers[63] = int3F;
-    idtRequestDispatchers[64] = int40;
-    idtRequestDispatchers[65] = int41;
-    idtRequestDispatchers[66] = int42;
-    idtRequestDispatchers[67] = int43;
-    idtRequestDispatchers[68] = int44;
-    idtRequestDispatchers[69] = int45;
-    idtRequestDispatchers[70] = int46;
-    idtRequestDispatchers[71] = int47;
-    idtRequestDispatchers[72] = int48;
-    idtRequestDispatchers[73] = int49;
-    idtRequestDispatchers[74] = int4A;
-    idtRequestDispatchers[75] = int4B;
-    idtRequestDispatchers[76] = int4C;
-    idtRequestDispatchers[77] = int4D;
-    idtRequestDispatchers[78] = int4E;
-    idtRequestDispatchers[79] = int4F;
-    idtRequestDispatchers[80] = int50;
-    idtRequestDispatchers[81] = int51;
-    idtRequestDispatchers[82] = int52;
-    idtRequestDispatchers[83] = int53;
-    idtRequestDispatchers[84] = int54;
-    idtRequestDispatchers[85] = int55;
-    idtRequestDispatchers[86] = int56;
-    idtRequestDispatchers[87] = int57;
-    idtRequestDispatchers[88] = int58;
-    idtRequestDispatchers[89] = int59;
-    idtRequestDispatchers[90] = int5A;
-    idtRequestDispatchers[91] = int5B;
-    idtRequestDispatchers[92] = int5C;
-    idtRequestDispatchers[93] = int5D;
-    idtRequestDispatchers[94] = int5E;
-    idtRequestDispatchers[95] = int5F;
-    idtRequestDispatchers[96] = int60;
-    idtRequestDispatchers[97] = int61;
-    idtRequestDispatchers[98] = int62;
-    idtRequestDispatchers[99] = int63;
-    idtRequestDispatchers[100] = int64;
-    idtRequestDispatchers[101] = int65;
-    idtRequestDispatchers[102] = int66;
-    idtRequestDispatchers[103] = int67;
-    idtRequestDispatchers[104] = int68;
-    idtRequestDispatchers[105] = int69;
-    idtRequestDispatchers[106] = int6A;
-    idtRequestDispatchers[107] = int6B;
-    idtRequestDispatchers[108] = int6C;
-    idtRequestDispatchers[109] = int6D;
-    idtRequestDispatchers[110] = int6E;
-    idtRequestDispatchers[111] = int6F;
-    idtRequestDispatchers[112] = int70;
-    idtRequestDispatchers[113] = int71;
-    idtRequestDispatchers[114] = int72;
-    idtRequestDispatchers[115] = int73;
-    idtRequestDispatchers[116] = int74;
-    idtRequestDispatchers[117] = int75;
-    idtRequestDispatchers[118] = int76;
-    idtRequestDispatchers[119] = int77;
-    idtRequestDispatchers[120] = int78;
-    idtRequestDispatchers[121] = int79;
-    idtRequestDispatchers[122] = int7A;
-    idtRequestDispatchers[123] = int7B;
-    idtRequestDispatchers[124] = int7C;
-    idtRequestDispatchers[125] = int7D;
-    idtRequestDispatchers[126] = int7E;
-    idtRequestDispatchers[127] = int7F;
-    idtRequestDispatchers[128] = int80;
-    idtRequestDispatchers[129] = int81;
-    idtRequestDispatchers[130] = int82;
-    idtRequestDispatchers[131] = int83;
-    idtRequestDispatchers[132] = int84;
-    idtRequestDispatchers[133] = int85;
-    idtRequestDispatchers[134] = int86;
-    idtRequestDispatchers[135] = int87;
-    idtRequestDispatchers[136] = int88;
-    idtRequestDispatchers[137] = int89;
-    idtRequestDispatchers[138] = int8A;
-    idtRequestDispatchers[139] = int8B;
-    idtRequestDispatchers[140] = int8C;
-    idtRequestDispatchers[141] = int8D;
-    idtRequestDispatchers[142] = int8E;
-    idtRequestDispatchers[143] = int8F;
-    idtRequestDispatchers[144] = int90;
-    idtRequestDispatchers[145] = int91;
-    idtRequestDispatchers[146] = int92;
-    idtRequestDispatchers[147] = int93;
-    idtRequestDispatchers[148] = int94;
-    idtRequestDispatchers[149] = int95;
-    idtRequestDispatchers[150] = int96;
-    idtRequestDispatchers[151] = int97;
-    idtRequestDispatchers[152] = int98;
-    idtRequestDispatchers[153] = int99;
-    idtRequestDispatchers[154] = int9A;
-    idtRequestDispatchers[155] = int9B;
-    idtRequestDispatchers[156] = int9C;
-    idtRequestDispatchers[157] = int9D;
-    idtRequestDispatchers[158] = int9E;
-    idtRequestDispatchers[159] = int9F;
-    idtRequestDispatchers[160] = intA0;
-    idtRequestDispatchers[161] = intA1;
-    idtRequestDispatchers[162] = intA2;
-    idtRequestDispatchers[163] = intA3;
-    idtRequestDispatchers[164] = intA4;
-    idtRequestDispatchers[165] = intA5;
-    idtRequestDispatchers[166] = intA6;
-    idtRequestDispatchers[167] = intA7;
-    idtRequestDispatchers[168] = intA8;
-    idtRequestDispatchers[169] = intA9;
-    idtRequestDispatchers[170] = intAA;
-    idtRequestDispatchers[171] = intAB;
-    idtRequestDispatchers[172] = intAC;
-    idtRequestDispatchers[173] = intAD;
-    idtRequestDispatchers[174] = intAE;
-    idtRequestDispatchers[175] = intAF;
-    idtRequestDispatchers[176] = intB0;
-    idtRequestDispatchers[177] = intB1;
-    idtRequestDispatchers[178] = intB2;
-    idtRequestDispatchers[179] = intB3;
-    idtRequestDispatchers[180] = intB4;
-    idtRequestDispatchers[181] = intB5;
-    idtRequestDispatchers[182] = intB6;
-    idtRequestDispatchers[183] = intB7;
-    idtRequestDispatchers[184] = intB8;
-    idtRequestDispatchers[185] = intB9;
-    idtRequestDispatchers[186] = intBA;
-    idtRequestDispatchers[187] = intBB;
-    idtRequestDispatchers[188] = intBC;
-    idtRequestDispatchers[189] = intBD;
-    idtRequestDispatchers[190] = intBE;
-    idtRequestDispatchers[191] = intBF;
-    idtRequestDispatchers[192] = intC0;
-    idtRequestDispatchers[193] = intC1;
-    idtRequestDispatchers[194] = intC2;
-    idtRequestDispatchers[195] = intC3;
-    idtRequestDispatchers[196] = intC4;
-    idtRequestDispatchers[197] = intC5;
-    idtRequestDispatchers[198] = intC6;
-    idtRequestDispatchers[199] = intC7;
-    idtRequestDispatchers[200] = intC8;
-    idtRequestDispatchers[201] = intC9;
-    idtRequestDispatchers[202] = intCA;
-    idtRequestDispatchers[203] = intCB;
-    idtRequestDispatchers[204] = intCC;
-    idtRequestDispatchers[205] = intCD;
-    idtRequestDispatchers[206] = intCE;
-    idtRequestDispatchers[207] = intCF;
-    idtRequestDispatchers[208] = intD0;
-    idtRequestDispatchers[209] = intD1;
-    idtRequestDispatchers[210] = intD2;
-    idtRequestDispatchers[211] = intD3;
-    idtRequestDispatchers[212] = intD4;
-    idtRequestDispatchers[213] = intD5;
-    idtRequestDispatchers[214] = intD6;
-    idtRequestDispatchers[215] = intD7;
-    idtRequestDispatchers[216] = intD8;
-    idtRequestDispatchers[217] = intD9;
-    idtRequestDispatchers[218] = intDA;
-    idtRequestDispatchers[219] = intDB;
-    idtRequestDispatchers[220] = intDC;
-    idtRequestDispatchers[221] = intDD;
-    idtRequestDispatchers[222] = intDE;
-    idtRequestDispatchers[223] = intDF;
-    idtRequestDispatchers[224] = intE0;
-    idtRequestDispatchers[225] = intE1;
-    idtRequestDispatchers[226] = intE2;
-    idtRequestDispatchers[227] = intE3;
-    idtRequestDispatchers[228] = intE4;
-    idtRequestDispatchers[229] = intE5;
-    idtRequestDispatchers[230] = intE6;
-    idtRequestDispatchers[231] = intE7;
-    idtRequestDispatchers[232] = intE8;
-    idtRequestDispatchers[233] = intE9;
-    idtRequestDispatchers[234] = intEA;
-    idtRequestDispatchers[235] = intEB;
-    idtRequestDispatchers[236] = intEC;
-    idtRequestDispatchers[237] = intED;
-    idtRequestDispatchers[238] = intEE;
-    idtRequestDispatchers[239] = intEF;
-    idtRequestDispatchers[240] = intF0;
-    idtRequestDispatchers[241] = intF1;
-    idtRequestDispatchers[242] = intF2;
-    idtRequestDispatchers[243] = intF3;
-    idtRequestDispatchers[244] = intF4;
-    idtRequestDispatchers[245] = intF5;
-    idtRequestDispatchers[246] = intF6;
-    idtRequestDispatchers[247] = intF7;
-    idtRequestDispatchers[248] = intF8;
-    idtRequestDispatchers[249] = intF9;
-    idtRequestDispatchers[250] = intFA;
-    idtRequestDispatchers[251] = intFB;
-    idtRequestDispatchers[252] = intFC;
-    idtRequestDispatchers[253] = intFD;
-    idtRequestDispatchers[254] = intFE;
-    idtRequestDispatchers[255] = intFF;
+    // idtRequestDispatchers[16] = int10;
+    // idtRequestDispatchers[17] = int11;
+    // idtRequestDispatchers[18] = int12;
+    // idtRequestDispatchers[19] = int13;
+    // idtRequestDispatchers[20] = int14;
+    // idtRequestDispatchers[21] = int15;
+    // idtRequestDispatchers[22] = int16;
+    // idtRequestDispatchers[23] = int17;
+    // idtRequestDispatchers[24] = int18;
+    // idtRequestDispatchers[25] = int19;
+    // idtRequestDispatchers[26] = int1A;
+    // idtRequestDispatchers[27] = int1B;
+    // idtRequestDispatchers[28] = int1C;
+    // idtRequestDispatchers[29] = int1D;
+    // idtRequestDispatchers[30] = int1E;
+    // idtRequestDispatchers[31] = int1F;
+    // idtRequestDispatchers[32] = int20;
+    // idtRequestDispatchers[33] = int21;
+    // idtRequestDispatchers[34] = int22;
+    // idtRequestDispatchers[35] = int23;
+    // idtRequestDispatchers[36] = int24;
+    // idtRequestDispatchers[37] = int25;
+    // idtRequestDispatchers[38] = int26;
+    // idtRequestDispatchers[39] = int27;
+    // idtRequestDispatchers[40] = int28;
+    // idtRequestDispatchers[41] = int29;
+    // idtRequestDispatchers[42] = int2A;
+    // idtRequestDispatchers[43] = int2B;
+    // idtRequestDispatchers[44] = int2C;
+    // idtRequestDispatchers[45] = int2D;
+    // idtRequestDispatchers[46] = int2E;
+    // idtRequestDispatchers[47] = int2F;
+    // idtRequestDispatchers[48] = int30;
+    // idtRequestDispatchers[49] = int31;
+    // idtRequestDispatchers[50] = int32;
+    // idtRequestDispatchers[51] = int33;
+    // idtRequestDispatchers[52] = int34;
+    // idtRequestDispatchers[53] = int35;
+    // idtRequestDispatchers[54] = int36;
+    // idtRequestDispatchers[55] = int37;
+    // idtRequestDispatchers[56] = int38;
+    // idtRequestDispatchers[57] = int39;
+    // idtRequestDispatchers[58] = int3A;
+    // idtRequestDispatchers[59] = int3B;
+    // idtRequestDispatchers[60] = int3C;
+    // idtRequestDispatchers[61] = int3D;
+    // idtRequestDispatchers[62] = int3E;
+    // idtRequestDispatchers[63] = int3F;
+    // idtRequestDispatchers[64] = int40;
+    // idtRequestDispatchers[65] = int41;
+    // idtRequestDispatchers[66] = int42;
+    // idtRequestDispatchers[67] = int43;
+    // idtRequestDispatchers[68] = int44;
+    // idtRequestDispatchers[69] = int45;
+    // idtRequestDispatchers[70] = int46;
+    // idtRequestDispatchers[71] = int47;
+    // idtRequestDispatchers[72] = int48;
+    // idtRequestDispatchers[73] = int49;
+    // idtRequestDispatchers[74] = int4A;
+    // idtRequestDispatchers[75] = int4B;
+    // idtRequestDispatchers[76] = int4C;
+    // idtRequestDispatchers[77] = int4D;
+    // idtRequestDispatchers[78] = int4E;
+    // idtRequestDispatchers[79] = int4F;
+    // idtRequestDispatchers[80] = int50;
+    // idtRequestDispatchers[81] = int51;
+    // idtRequestDispatchers[82] = int52;
+    // idtRequestDispatchers[83] = int53;
+    // idtRequestDispatchers[84] = int54;
+    // idtRequestDispatchers[85] = int55;
+    // idtRequestDispatchers[86] = int56;
+    // idtRequestDispatchers[87] = int57;
+    // idtRequestDispatchers[88] = int58;
+    // idtRequestDispatchers[89] = int59;
+    // idtRequestDispatchers[90] = int5A;
+    // idtRequestDispatchers[91] = int5B;
+    // idtRequestDispatchers[92] = int5C;
+    // idtRequestDispatchers[93] = int5D;
+    // idtRequestDispatchers[94] = int5E;
+    // idtRequestDispatchers[95] = int5F;
+    // idtRequestDispatchers[96] = int60;
+    // idtRequestDispatchers[97] = int61;
+    // idtRequestDispatchers[98] = int62;
+    // idtRequestDispatchers[99] = int63;
+    // idtRequestDispatchers[100] = int64;
+    // idtRequestDispatchers[101] = int65;
+    // idtRequestDispatchers[102] = int66;
+    // idtRequestDispatchers[103] = int67;
+    // idtRequestDispatchers[104] = int68;
+    // idtRequestDispatchers[105] = int69;
+    // idtRequestDispatchers[106] = int6A;
+    // idtRequestDispatchers[107] = int6B;
+    // idtRequestDispatchers[108] = int6C;
+    // idtRequestDispatchers[109] = int6D;
+    // idtRequestDispatchers[110] = int6E;
+    // idtRequestDispatchers[111] = int6F;
+    // idtRequestDispatchers[112] = int70;
+    // idtRequestDispatchers[113] = int71;
+    // idtRequestDispatchers[114] = int72;
+    // idtRequestDispatchers[115] = int73;
+    // idtRequestDispatchers[116] = int74;
+    // idtRequestDispatchers[117] = int75;
+    // idtRequestDispatchers[118] = int76;
+    // idtRequestDispatchers[119] = int77;
+    // idtRequestDispatchers[120] = int78;
+    // idtRequestDispatchers[121] = int79;
+    // idtRequestDispatchers[122] = int7A;
+    // idtRequestDispatchers[123] = int7B;
+    // idtRequestDispatchers[124] = int7C;
+    // idtRequestDispatchers[125] = int7D;
+    // idtRequestDispatchers[126] = int7E;
+    // idtRequestDispatchers[127] = int7F;
+    // idtRequestDispatchers[128] = int80;
+    // idtRequestDispatchers[129] = int81;
+    // idtRequestDispatchers[130] = int82;
+    // idtRequestDispatchers[131] = int83;
+    // idtRequestDispatchers[132] = int84;
+    // idtRequestDispatchers[133] = int85;
+    // idtRequestDispatchers[134] = int86;
+    // idtRequestDispatchers[135] = int87;
+    // idtRequestDispatchers[136] = int88;
+    // idtRequestDispatchers[137] = int89;
+    // idtRequestDispatchers[138] = int8A;
+    // idtRequestDispatchers[139] = int8B;
+    // idtRequestDispatchers[140] = int8C;
+    // idtRequestDispatchers[141] = int8D;
+    // idtRequestDispatchers[142] = int8E;
+    // idtRequestDispatchers[143] = int8F;
+    // idtRequestDispatchers[144] = int90;
+    // idtRequestDispatchers[145] = int91;
+    // idtRequestDispatchers[146] = int92;
+    // idtRequestDispatchers[147] = int93;
+    // idtRequestDispatchers[148] = int94;
+    // idtRequestDispatchers[149] = int95;
+    // idtRequestDispatchers[150] = int96;
+    // idtRequestDispatchers[151] = int97;
+    // idtRequestDispatchers[152] = int98;
+    // idtRequestDispatchers[153] = int99;
+    // idtRequestDispatchers[154] = int9A;
+    // idtRequestDispatchers[155] = int9B;
+    // idtRequestDispatchers[156] = int9C;
+    // idtRequestDispatchers[157] = int9D;
+    // idtRequestDispatchers[158] = int9E;
+    // idtRequestDispatchers[159] = int9F;
+    // idtRequestDispatchers[160] = intA0;
+    // idtRequestDispatchers[161] = intA1;
+    // idtRequestDispatchers[162] = intA2;
+    // idtRequestDispatchers[163] = intA3;
+    // idtRequestDispatchers[164] = intA4;
+    // idtRequestDispatchers[165] = intA5;
+    // idtRequestDispatchers[166] = intA6;
+    // idtRequestDispatchers[167] = intA7;
+    // idtRequestDispatchers[168] = intA8;
+    // idtRequestDispatchers[169] = intA9;
+    // idtRequestDispatchers[170] = intAA;
+    // idtRequestDispatchers[171] = intAB;
+    // idtRequestDispatchers[172] = intAC;
+    // idtRequestDispatchers[173] = intAD;
+    // idtRequestDispatchers[174] = intAE;
+    // idtRequestDispatchers[175] = intAF;
+    // idtRequestDispatchers[176] = intB0;
+    // idtRequestDispatchers[177] = intB1;
+    // idtRequestDispatchers[178] = intB2;
+    // idtRequestDispatchers[179] = intB3;
+    // idtRequestDispatchers[180] = intB4;
+    // idtRequestDispatchers[181] = intB5;
+    // idtRequestDispatchers[182] = intB6;
+    // idtRequestDispatchers[183] = intB7;
+    // idtRequestDispatchers[184] = intB8;
+    // idtRequestDispatchers[185] = intB9;
+    // idtRequestDispatchers[186] = intBA;
+    // idtRequestDispatchers[187] = intBB;
+    // idtRequestDispatchers[188] = intBC;
+    // idtRequestDispatchers[189] = intBD;
+    // idtRequestDispatchers[190] = intBE;
+    // idtRequestDispatchers[191] = intBF;
+    // idtRequestDispatchers[192] = intC0;
+    // idtRequestDispatchers[193] = intC1;
+    // idtRequestDispatchers[194] = intC2;
+    // idtRequestDispatchers[195] = intC3;
+    // idtRequestDispatchers[196] = intC4;
+    // idtRequestDispatchers[197] = intC5;
+    // idtRequestDispatchers[198] = intC6;
+    // idtRequestDispatchers[199] = intC7;
+    // idtRequestDispatchers[200] = intC8;
+    // idtRequestDispatchers[201] = intC9;
+    // idtRequestDispatchers[202] = intCA;
+    // idtRequestDispatchers[203] = intCB;
+    // idtRequestDispatchers[204] = intCC;
+    // idtRequestDispatchers[205] = intCD;
+    // idtRequestDispatchers[206] = intCE;
+    // idtRequestDispatchers[207] = intCF;
+    // idtRequestDispatchers[208] = intD0;
+    // idtRequestDispatchers[209] = intD1;
+    // idtRequestDispatchers[210] = intD2;
+    // idtRequestDispatchers[211] = intD3;
+    // idtRequestDispatchers[212] = intD4;
+    // idtRequestDispatchers[213] = intD5;
+    // idtRequestDispatchers[214] = intD6;
+    // idtRequestDispatchers[215] = intD7;
+    // idtRequestDispatchers[216] = intD8;
+    // idtRequestDispatchers[217] = intD9;
+    // idtRequestDispatchers[218] = intDA;
+    // idtRequestDispatchers[219] = intDB;
+    // idtRequestDispatchers[220] = intDC;
+    // idtRequestDispatchers[221] = intDD;
+    // idtRequestDispatchers[222] = intDE;
+    // idtRequestDispatchers[223] = intDF;
+    // idtRequestDispatchers[224] = intE0;
+    // idtRequestDispatchers[225] = intE1;
+    // idtRequestDispatchers[226] = intE2;
+    // idtRequestDispatchers[227] = intE3;
+    // idtRequestDispatchers[228] = intE4;
+    // idtRequestDispatchers[229] = intE5;
+    // idtRequestDispatchers[230] = intE6;
+    // idtRequestDispatchers[231] = intE7;
+    // idtRequestDispatchers[232] = intE8;
+    // idtRequestDispatchers[233] = intE9;
+    // idtRequestDispatchers[234] = intEA;
+    // idtRequestDispatchers[235] = intEB;
+    // idtRequestDispatchers[236] = intEC;
+    // idtRequestDispatchers[237] = intED;
+    // idtRequestDispatchers[238] = intEE;
+    // idtRequestDispatchers[239] = intEF;
+    // idtRequestDispatchers[240] = intF0;
+    // idtRequestDispatchers[241] = intF1;
+    // idtRequestDispatchers[242] = intF2;
+    // idtRequestDispatchers[243] = intF3;
+    // idtRequestDispatchers[244] = intF4;
+    // idtRequestDispatchers[245] = intF5;
+    // idtRequestDispatchers[246] = intF6;
+    // idtRequestDispatchers[247] = intF7;
+    // idtRequestDispatchers[248] = intF8;
+    // idtRequestDispatchers[249] = intF9;
+    // idtRequestDispatchers[250] = intFA;
+    // idtRequestDispatchers[251] = intFB;
+    // idtRequestDispatchers[252] = intFC;
+    // idtRequestDispatchers[253] = intFD;
+    // idtRequestDispatchers[254] = intFE;
+    // idtRequestDispatchers[255] = intFF;
 
     for (int i = 0; i < 256; i++) {
         if (i == 0x0F) continue; // 0x0f is reserved

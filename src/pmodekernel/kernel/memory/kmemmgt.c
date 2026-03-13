@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "./logging.h"
+#include "../logging.h"
 
 #define VMM_PRESENT    0x1
 #define VMM_WRITABLE   0x2
@@ -12,8 +12,9 @@
 #define VMM_MMIO       0x8
 
 #define PAGE_SIZE 4096
-#define RECURSIVE_PD_ADDR 0xFFC00000
-#define RECURSIVE_PD ((struct PageDirectoryEntry*) RECURSIVE_PD_ADDR) // where Page Directory Table appears in memory b/c the last idx of the PDT refers back to the start of the PDT
+#define RECURSIVE_PT_ADDR 0xFFC00000
+#define KERNEL_PAGE_DIRECTORY_ADDR 0xFFFFF000
+#define KERNEL_PAGE_DIRECTORY ((struct PageDirectoryEntry*) KERNEL_PAGE_DIRECTORY_ADDR) 
 #define NULL ((void*)0)
 #define MMIO_VIRTUAL_SPACE_BASE 0xE0000000
 #define MMIO_VIRTUAL_SPACE_SIZE 0x10000000
@@ -83,10 +84,10 @@ struct UsableRegion {
 
 #pragma pack(pop)
 
-__attribute__((aligned(PAGE_SIZE)))
-struct PageDirectoryEntry kernelPageDirectory[PAGE_SIZE/sizeof(struct PageDirectoryEntry)];
-__attribute__((aligned(PAGE_SIZE)))
-struct PageTableEntry firstKernelPageTable[PAGE_SIZE/sizeof(struct PageTableEntry)];
+// __attribute__((aligned(PAGE_SIZE)))
+// struct PageDirectoryEntry kernelPageDirectory[PAGE_SIZE/sizeof(struct PageDirectoryEntry)];
+// __attribute__((aligned(PAGE_SIZE)))
+// struct PageTableEntry firstKernelPageTable[PAGE_SIZE/sizeof(struct PageTableEntry)];
 
 static struct UsableRegion usableRegions[MAX_REGIONS];
 static uint8_t usableRegionsCurrentLength = 0;
@@ -94,7 +95,7 @@ static uint8_t usableRegionsCurrentLength = 0;
 static uint8_t physicalPageRecord[0xFFFFFFFF/PAGE_SIZE/8];
 
 struct KallocHeader* heapStart = NULL;
-uint32_t nextVAddrToMap = 0x40000000;
+uint32_t nextVAddrToMap = 0xC1000000;
 
 static uint32_t nextFreePageFramePhysicalStartingAddress = 4194304 - PAGE_SIZE;
 static uint32_t maxMemory = 4294967296 - 1;
@@ -201,13 +202,13 @@ void parseE820Output() {
 
     mergeRegions();
 
-    // for (int i = 0; i < usableRegionsCurrentLength; i++) {
-    //     kprint("Start range: "); 
-    //     kprint_hex64(usableRegions[i].base);
-    //     kprint("\nEnd range: ");
-    //     kprint_hex64(usableRegions[i].length + usableRegions[i].base);
-    //     kprint("\n");
-    // }
+    for (int i = 0; i < usableRegionsCurrentLength; i++) {
+        kprint("Start range: "); 
+        kprint_hex64(usableRegions[i].base);
+        kprint("\nEnd range: ");
+        kprint_hex64(usableRegions[i].length + usableRegions[i].base);
+        kprint("\n");
+    }
 
     // kprint("Usable list length: ");
     // kprint_hex(usableRegionsCurrentLength);
@@ -223,100 +224,20 @@ void parseE820Output() {
 
 
 
-void initMem() {
+void continuedHigherHalfMemSetup(uint32_t firstKernelPageTableAddr, uint32_t kernelPageDirectoryAddr) {
     parseE820Output();
 
-    struct PageDirectoryEntry pde = {
-        .present = 0,
-        .rw = 0,
-        .user = 0,
-        .pwt = 0,
-        .pcd = 0,
-        .accessed = 0,
-        .reserved  = 0,
-        .pageSize  = 0,
-        .ignored  = 0,
-        .available = 0,
-        .pageAddress = 0
-    };
+    *((uint8_t*)0xB8002) = 'p';
+    *((uint8_t*)0xB8003) = 0x0F;
 
-    struct PageTableEntry pte = { 
-        .present = 1,
-        .rw = 1,
-        .user = 0,
-        .pwt = 0,
-        .pcd = 0,
-        .accessed = 0,
-        .dirty = 0,
-        .pageTableAttrIdx = 0,
-        .globalPage = 0,
-        .available = 0,
-        .pageAddress = 0
-    };
-
-    // pmmSet((uint32_t) &kernelPageDirectory, PMM_UNAVAILABLE);
-
-    for (int i = 0; i < PAGE_SIZE/sizeof(struct PageTableEntry); i++) {
-        kernelPageDirectory[i] = pde; // zero PDEs
-        
-        pte.pageAddress = i;
-        
-        firstKernelPageTable[i] = pte; // setup PTE for first 4 megabytes
+    pmmSet(firstKernelPageTableAddr, PMM_UNAVAILABLE);
+    pmmSet(kernelPageDirectoryAddr, PMM_UNAVAILABLE);
+    for (int i = 0; i < PAGE_SIZE/sizeof(struct PageTableEntry); i+= PAGE_SIZE) {
+        pmmSet(i, PMM_UNAVAILABLE);
     }
 
-    struct PageDirectoryEntry firstPageDirectoryEntry =  {
-        .present = 1,
-        .rw = 1,
-        .user = 0,
-        .pwt = 0,
-        .pcd = 0,
-        .accessed = 0,
-        .reserved  = 0,
-        .pageSize  = 0,
-        .ignored  = 0,
-        .available = 1,
-        .pageAddress = ((uint32_t) &firstKernelPageTable) >> 12
-    };
-
-    pmmSet((uint32_t) &firstKernelPageTable, PMM_UNAVAILABLE);
-
-    // points to page directory itself
-    struct PageDirectoryEntry loopBack =  {
-        .present = 1,
-        .rw = 1,
-        .user = 0,
-        .pwt = 0,
-        .pcd = 0,
-        .accessed = 0,
-        .reserved  = 0,
-        .pageSize  = 0,
-        .ignored  = 0,
-        .available = 1,
-        .pageAddress = ((uint32_t) &kernelPageDirectory) >> 12
-    };
-
-    pmmSet((uint32_t) &kernelPageDirectory, PMM_UNAVAILABLE);
-
-    // points to first page
-    kernelPageDirectory[0] = firstPageDirectoryEntry;
-    kernelPageDirectory[0xC0000000 >> 22] = firstPageDirectoryEntry; // address 0xC0000000
-    kernelPageDirectory[1023] = loopBack;
-    
-    // REMEMBER TO FLUSH TLB PER CHANGE
-
-    // move addr into cr3 register and flip the right bit on cr0 to enable paging
-    uint32_t kPDAddress = (uint32_t)&kernelPageDirectory;
-    asm volatile (
-        "mov %0, %%cr3\n\t"
-        "mov %%cr0, %%eax\n\t"
-        "or $0x80000000, %%eax\n\t"
-        "mov %%eax, %%cr0\n\t"
-        "jmp 1f\n\t" // to clear prefetched instructions
-        "1:"
-        :
-        : "r" (kPDAddress)
-        : "eax"
-    );
+    *((uint8_t*)0xB8002) = 'E';
+    *((uint8_t*)0xB8003) = 0x0F;
 }
 
 bool vmmAddPage(uint32_t vAddr, bool shouldZero) {
@@ -479,7 +400,7 @@ uint32_t pmmAllocNextFreePage() {
 void premove(uint32_t vAddr) {
     // first 10 bits is Page Directory, next 10 is table index, next 12 is page offset
     // loop back to start of page directory, then set the PTE to zero
-    uint32_t *PTE = (uint32_t*)((RECURSIVE_PD_ADDR) + 
+    uint32_t *PTE = (uint32_t*)((RECURSIVE_PT_ADDR) + 
         ((0b11111111111111111111000000000000 & vAddr) >> 10));
     *PTE = 0x00000000; // deactivate page in memory
 
@@ -576,7 +497,7 @@ void free(void* ptr) {
 }
 
 uint32_t virtToPhysAddr(uint32_t vAddr) {
-    uint32_t *PTE = (uint32_t*)((RECURSIVE_PD_ADDR) + 
+    uint32_t *PTE = (uint32_t*)((RECURSIVE_PT_ADDR) + 
         ((0xFFFFF000 & vAddr) >> 10));
     struct PageTableEntry *pte = (struct PageTableEntry*) PTE;
     // << 12
@@ -604,7 +525,7 @@ bool createNewPageTable(uint32_t vAddr) {
         .pageAddress = pageStart >> 12
     };
 
-    kernelPageDirectory[ptdIdx] = new;
+    KERNEL_PAGE_DIRECTORY[ptdIdx] = new;
 
     asm volatile (
         "mov %%cr3, %%eax\n"
@@ -614,7 +535,7 @@ bool createNewPageTable(uint32_t vAddr) {
         : "eax", "memory"
     );
 
-    uint8_t *newPageTable = (uint8_t*) (RECURSIVE_PD_ADDR + (ptdIdx << 12));
+    uint8_t *newPageTable = (uint8_t*) (RECURSIVE_PT_ADDR + (ptdIdx << 12));
 
     for (int i = 0; i < 4096; i++) {
         newPageTable[i] = 0x00;
@@ -637,9 +558,11 @@ bool vmmAllocatePage(uint32_t vAddr, uint32_t physAddr, uint8_t flags) {
 
     uint16_t ptdIdx = (uint16_t)((vAddr >> 22)&0b1111111111);
 
-    if (kernelPageDirectory[ptdIdx].present == 1) {
+    
+
+    if (KERNEL_PAGE_DIRECTORY[ptdIdx].present == 1) {
         // page table present
-        struct PageTableEntry* pte = (struct PageTableEntry*)(RECURSIVE_PD_ADDR + ((vAddr >> 12) * 4)); 
+        struct PageTableEntry* pte = (struct PageTableEntry*)(RECURSIVE_PT_ADDR + ((vAddr >> 12) * 4)); 
         
         if (pte->present == 0) {
             // page not allocated yet
@@ -684,7 +607,7 @@ bool vmmAllocatePage(uint32_t vAddr, uint32_t physAddr, uint8_t flags) {
                 pte.pwt = 1;
             }
             
-            uint32_t pteAddress = RECURSIVE_PD_ADDR + ((vAddr >> 12) * 4);
+            uint32_t pteAddress = RECURSIVE_PT_ADDR + ((vAddr >> 12) * 4);
             struct PageTableEntry* ptePtr = (struct PageTableEntry*)pteAddress;
                 
             *ptePtr = pte;

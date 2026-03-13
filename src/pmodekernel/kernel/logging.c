@@ -5,10 +5,14 @@ static int cursor = 0;
 volatile char* videoMemory = (volatile char*) 0xB8000;
 
 void kclear() {
+    // *((uint8_t*)0xB8002) = 'q';
+    // *((uint8_t*)0xB8003) = 0x0F;
     for (int i = 0; i < 80*25; i++) {
         videoMemory[i*2] = ' ';
         videoMemory[i*2 + 1] = 0x0F;
     }
+    // *((uint8_t*)0xB8002) = '/';
+    // *((uint8_t*)0xB8003) = 0x0F;
     cursor = 0;
 }
 
@@ -27,6 +31,7 @@ void kputc(char c) {
 }
 
 void kprint(const char* s) {
+    // s--;
     while (*s)
         kputc(*s++);
 }
@@ -35,6 +40,7 @@ void kprint_hex(uint32_t n) {
     char hexChars[] = "0123456789ABCDEF";
     char result[11];
 
+    // result[-1] = '\0';
     result[0] = '0';
     result[1] = 'x';
     result[10] = '\0';

@@ -1,4 +1,7 @@
-ENTRY(kentry)       
+ENTRY(kentry)      
+
+KRNL_BASE = 0xC0000000;
+
 SECTIONS {
   . = 0x1000;       /* Load address for kernel in memory */
 
@@ -10,16 +13,24 @@ SECTIONS {
     *(.boot.data)
   }
 
-  _higher_half_lma = .;
+  . += KRNL_BASE;
 
-  . = 0xC0001000 + _higher_half_lma - 0x1000;
-  .text : AT(_higher_half_lma) 
+  /* . = 0xC0001000 + _higher_half_lma - 0x1000; */
+  .text : AT(ADDR(.text) - KRNL_BASE) 
    { *(.text) }   
-  .rodata : AT(_higher_half_lma + SIZEOF(.text))
+  .rodata : AT(ADDR(.rodata) - KRNL_BASE)
    { *(.rodata) } 
-  .data : AT(_higher_half_lma + SIZEOF(.text) + SIZEOF(.rodata))
+  .data : AT(ADDR(.data) - KRNL_BASE)
    { *(.data) }   
-  .bss : AT(_higher_half_lma + SIZEOF(.text) + SIZEOF(.rodata) + SIZEOF(.data))
-   { *(.bss) }     
-}
+  .bss : AT(ADDR(.bss)- KRNL_BASE)
+   { 
+    *(.bss*) 
+    *(COMMON)
+   }    
 
+   /DISCARD/ : {
+    *(.note*)
+    *(.comment)
+    *(.eh_frame*)
+   } 
+}
