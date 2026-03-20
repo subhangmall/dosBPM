@@ -162,8 +162,8 @@ __attribute__((section(".boot"))) void initMemory(void (*functionToJumpToAfterCo
     kernelPageDirectory[0xC0000000 >> 22] = firstPageDirectoryEntry; // address 0xC0000000
     kernelPageDirectory[1023] = loopBack;
 
-    *((uint8_t*)0xB800A) = 'F';
-    *((uint8_t*)0xB800B) = 0x0F;
+    // *((uint8_t*)0xB800A) = 'F';
+    // *((uint8_t*)0xB800B) = 0x0F;
     
     // REMEMBER TO FLUSH TLB PER CHANGE
     // *((uint8_t*)0xB8002) = 'B';

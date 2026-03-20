@@ -501,7 +501,12 @@ uint32_t virtToPhysAddr(uint32_t vAddr) {
         ((0xFFFFF000 & vAddr) >> 10));
     struct PageTableEntry *pte = (struct PageTableEntry*) PTE;
     // << 12
-    return (((pte->pageAddress) << 12) + (0x00000FFF & vAddr));
+    // kprint_hex((((1) << 12) + (0x00000FFF & vAddr)));
+    // kprint_hex(pte->pageAddress);
+
+    // return (((pte->pageAddress) << 12) + (0x00000FFF & vAddr));
+
+    return 0xFFFFFFFF;
 }
 
 bool createNewPageTable(uint32_t vAddr) {

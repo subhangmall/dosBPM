@@ -1,15 +1,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define VGA_MEMORY_PHYS 0xB8000
+#define WHITE_ON_BLACK 0x0F
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+
 static int cursor = 0;
-volatile char* videoMemory = (volatile char*) 0xB8000;
+volatile uint16_t*  videoMemory = (volatile uint16_t*)VGA_MEMORY_PHYS;
 
 void kclear() {
     // *((uint8_t*)0xB8002) = 'q';
     // *((uint8_t*)0xB8003) = 0x0F;
-    for (int i = 0; i < 80*25; i++) {
-        videoMemory[i*2] = ' ';
-        videoMemory[i*2 + 1] = 0x0F;
+    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
+        videoMemory[i] = ((uint16_t)WHITE_ON_BLACK << 8) | ' ';
     }
     // *((uint8_t*)0xB8002) = '/';
     // *((uint8_t*)0xB8003) = 0x0F;
@@ -17,16 +21,15 @@ void kclear() {
 }
 
 void kputc(char c) {
-    if (cursor == 80 * 25) {
+    if (cursor == VGA_WIDTH * VGA_HEIGHT) {
         kclear();
     }
     if (c == '\n') {
-        cursor = (cursor / 80 + 1) * 80;
+        cursor = (cursor / VGA_WIDTH + 1) * VGA_WIDTH;
         return;
     }
 
-    videoMemory[cursor*2] = c;
-    videoMemory[cursor*2+1] = 0x0F;
+    videoMemory[cursor] = ((uint16_t)WHITE_ON_BLACK << 8) | c;
     cursor++;
 }
 

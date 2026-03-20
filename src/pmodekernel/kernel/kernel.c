@@ -2,13 +2,16 @@
 #include <stdbool.h>
 #include "./memory/memSetup.h"
 #include "./memory/kmemmgt.h"
-#include "./idt.h"
+// #include "./idt.h"
 #include "./logging.h"
+#include "./interruptsAndIO/idt.h"
+
+extern void int0(void);
 // #include "./memory/kmemmgt.h"
 // #include "./logging.h"
 // #include "./idt.h"
-#include "./pic.h"
-#include "./basicInterruptHandlers.h"
+// #include "./pic.h"
+// #include "./basicInterruptHandlers.h"
 
 __attribute__((section(".boot"))) void kentry(void);
 void continueInitialization();
@@ -96,8 +99,10 @@ void continueInitialization();
 
 
 __attribute__((section(".boot"))) void kentry(void) {
-    *((uint8_t*)0xB8002) = 'l';
-    *((uint8_t*)0xB8003) = 0x0F;
+    // *((uint8_t*)0xB8002) = 'l';
+    // *((uint8_t*)0xB8003) = 0x0F;
+
+    // videoMemory = (volatile char*) 0xB8000;
 
     // asm volatile("hlt");
 
@@ -107,16 +112,94 @@ __attribute__((section(".boot"))) void kentry(void) {
 }
 
 void continueInitialization() {
-    videoMemory = (volatile char*) allocatePhysicalRange(0xB8000, 4000);
-//     // *((uint8_t*)0xB8002) = 'l';
-//     // *((uint8_t*)0xB8003) = 0x0F;
+    // volatile char* a = (volatile char*) allocatePhysicalRange(0xB8000, 4000);
+    videoMemory = (volatile char*) 0xC00B8000;
+
+
+    // kprint_hex((uint32_t) &a);
+    
+    // videoMemory = (volatile char*) allocatePhysicalRange(0xB8000, 4000);
+    // a[0] = 'a';
+    // a[1] = 0x0F;
+    
+    // *((uint8_t*)0xB8000) = 'b';
+    // *((uint8_t*)0xB8001) = 0x0F;
+    
+    // *((uint8_t*)0xB8002) = 'l';
+    // *((uint8_t*)0xB8003) = 0x0F;
     kclear();
-    initIDTStructures();
-    kprint("hi");
-    initPIC(0x20, 0x28);
-    enableIDT();
-    enableExternalInterrupts();
+    // kprint("hi");
+
+    uint8_t* a = kalloc(5000);
+
+    kprint_hex(virtToPhysAddr(0xC0000100));
+
+    // kprint_hex(virtToPhysAddr((uint32_t)a));
+
+    // for (uint16_t i = 0; i < 1; i++) {
+    //     a[i] =  0x00;
+    // }
+
+    setupInterruptStructures();
+    enableInterrupts();
+
+    kprint("HIIIIII");
+
+    kprint_hex((uint32_t)&int0);
+
+    kprint_hex((uint32_t)idt[0].offset + (((uint32_t)idt[0].offset2) << 16));
+
+    // asm volatile (
+    //     "int $0x00"
+    //     :
+    //     :
+    //     :
+    // );
+
+    // int* a = kalloc(5000);
+
+
+    kprint("\nDPL: ");
+    kprint_hex(idt[0].dpl);
+    kprint("\nGATE TYPE: ");
+    kprint_hex(idt[0].gateType);
+    kprint("\nPRESENT: ");
+    kprint_hex(idt[0].present);
+    // kprint("\nRESERVED: ");
+    // kprint_hex(idt[0].reserved);
+    // kprint("\nSEG SELECTOR: ");
+    // kprint_hex(idt[0].segSelector);
+    // kprint("\nZERO:");
+    // kprint_hex(idt[0].zero);
+    // kprint_hex(idt[0].)
+
+
+
+
+    // asm volatile (
+    //     "int $0x00"
+    //     :
+    //     :
+    //     :
+    // );
+
+    // initIDTStructures();
+    // kprint("hi");
+    // // initPIC(0x20, 0x28);
+    // kprint("DIV BY ZERO EXCEPTION");
     // setIDTHandler(0x00, (uint32_t) divByZeroException);
+    
+    // kprint_hex((uint32_t)divByZeroException);
+    // kprint_hex(1/0);
+
+    // enableIDT();
+    // asm volatile(
+    //     "int $0x12"
+    // );
+
+    // asm volatile(
+    //     "int $0x00"
+    // );
     // kprint_hex(1/0);
     
 //     // kclear();

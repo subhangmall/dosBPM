@@ -2,6 +2,7 @@
 
 KERNEL := src/pmodekernel/kernel
 MEM := $(KERNEL)/memory
+INTANDIO := $(KERNEL)/interruptsAndIO
 BOOT := src/pmodekernel/boot
 TMP := tmp
 OUT := target
@@ -23,11 +24,11 @@ $(TMP)/boot.bin: $(BOOT)/boot.asm $(TMP)/kernel.bin | $(TMP)
 $(TMP)/kernel.bin: $(TMP)/kernel.elf
 	objcopy -O binary $(TMP)/kernel.elf $(TMP)/kernel.bin
 
-# $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
-# 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o
+# $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
+# 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o
 
-$(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/pic.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
-	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intHandlers.o $(TMP)/pic.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o
+$(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
+	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o
 
 # $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/logging.o $(TMP)/kmemmgt.o $(KERNEL)/linker.ld
 # 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/logging.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o
@@ -44,7 +45,7 @@ $(TMP)/memSetup.o: $(MEM)/memSetup.c | $(TMP)
 $(TMP)/logging.o: $(KERNEL)/logging.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
-$(TMP)/idt.o: $(KERNEL)/idt.c | $(TMP)
+$(TMP)/idt.o: $(INTANDIO)/idt.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
 $(TMP)/pic.o: $(KERNEL)/pic.c | $(TMP)
@@ -57,7 +58,7 @@ $(TMP)/basicInterruptHandlers.o: $(KERNEL)/basicInterruptHandlers.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
 
-$(TMP)/intHandlers.o: $(KERNEL)/intHandlers.asm | $(TMP)
+$(TMP)/intDispatchers.o: $(INTANDIO)/intDispatchers.asm | $(TMP)
 	nasm -f elf32 $< -o $@
 
 $(TMP):
