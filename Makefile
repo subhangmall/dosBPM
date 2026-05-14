@@ -2,8 +2,9 @@
 
 KERNEL := src/pmodekernel/kernel
 MEM := $(KERNEL)/memory
-INTANDIO := $(KERNEL)/interruptsAndIO
-BOOT := src/pmodekernel/boot
+INTR := $(KERNEL)/interrupts
+IO := $(KERNEL)/io
+BOOT := src/boot
 TMP := tmp
 OUT := target
 
@@ -27,8 +28,8 @@ $(TMP)/kernel.bin: $(TMP)/kernel.elf
 # $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
 # 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o
 
-$(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
-	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o
+$(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(TMP)/pic.o $(KERNEL)/linker.ld 
+	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(TMP)/pic.o
 
 # $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/logging.o $(TMP)/kmemmgt.o $(KERNEL)/linker.ld
 # 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/logging.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o
@@ -45,20 +46,20 @@ $(TMP)/memSetup.o: $(MEM)/memSetup.c | $(TMP)
 $(TMP)/logging.o: $(KERNEL)/logging.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
-$(TMP)/idt.o: $(INTANDIO)/idt.c | $(TMP)
+$(TMP)/idt.o: $(INTR)/idt.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
-$(TMP)/pic.o: $(KERNEL)/pic.c | $(TMP)
+$(TMP)/pic.o: $(INTR)/pic.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
-$(TMP)/iolibrary.o: $(KERNEL)/iolibrary.c | $(TMP)
+$(TMP)/iolibrary.o: $(IO)/iolibrary.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
-$(TMP)/basicInterruptHandlers.o: $(KERNEL)/basicInterruptHandlers.c | $(TMP)
+$(TMP)/basicInterruptHandlers.o: $(INTR)/basicInterruptHandlers.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
 
-$(TMP)/intDispatchers.o: $(INTANDIO)/intDispatchers.asm | $(TMP)
+$(TMP)/intDispatchers.o: $(INTR)/intDispatchers.asm | $(TMP)
 	nasm -f elf32 $< -o $@
 
 $(TMP):

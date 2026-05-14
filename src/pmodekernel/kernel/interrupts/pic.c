@@ -1,7 +1,7 @@
 // THANKS TO THE OS DEV WIKI for help in programming the PIC init, disable, and eoi functions
 #include <stdint.h>
-#include "./iolibrary.h"
-#include "./logging.h"
+#include "../io/iolibrary.h"
+#include "../logging.h"
 #include "./idt.h"
 
 #define PIC1		0x20		/* IO base address for master PIC */
@@ -33,10 +33,10 @@ void defaultPICHandler(uint32_t* stack);
 uint8_t irqNumToIntNum(uint8_t irqNum);
 
 bool linkIRQHandler(uint8_t irqNum, uint32_t address) {
-	if (irqNumToIntNum(irqNum) == 0x00) {
-		return false;
-	}
-	setIDTHandler(irqNumToIntNum(irqNum), address);
+	// if (irqNumToIntNum(irqNum) == 0x00) {
+	// 	return false;
+	// }
+	// setIDTHandler(irqNumToIntNum(irqNum), address);
 }
 
 void initPIC(uint8_t mOffset, uint8_t sOffset) {
