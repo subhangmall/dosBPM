@@ -1,20 +1,16 @@
 #include <stdint.h>
-#include <stdbool.h>
-#include "../logging.h"
 
 #define PAGE_SIZE 4096
-#define RECURSIVE_PT_ADDR 0xFFC00000
-#define KERNEL_PAGE_DIRECTORY_ADDR 0xFFFFF000
-#define KERNEL_PAGE_DIRECTORY ((struct PageDirectoryEntry*) KERNEL_PAGE_DIRECTORY_ADDR) 
-#define NULL ((void*)0)
-#define MMIO_VIRTUAL_SPACE_BASE 0xE0000000
-#define MMIO_VIRTUAL_SPACE_SIZE 0x10000000
-#define AVAILABLE_MEM_E820 1
-#define MAX_REGIONS 1024
 #define PMM_UNAVAILABLE true
 #define PMM_AVAILABLE false
-#define ALIGN_DOWN(x) ((x) & ~(PAGE_SIZE - 1))
-#define ALIGN_UP(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+#define RECURSIVE_PT_ADDR 0xFFC00000
+#define KERNEL_PAGE_DIRECTORY ((struct PageDirectoryEntry*) KERNEL_PAGE_DIRECTORY_ADDR) 
+#define KERNEL_PAGE_DIRECTORY_ADDR 0xFFFFF000
+#define MMIO_VIRTUAL_SPACE_BASE 0xE0000000
+#define MMIO_VIRTUAL_SPACE_SIZE 0x10000000
+
+uint8_t physicalPageRecord[0xFFFFFFFF/PAGE_SIZE/8];
+static uint32_t mmioNextFree = MMIO_VIRTUAL_SPACE_BASE;
 
 #pragma pack(push, 1)
 
@@ -46,28 +42,7 @@ struct PageTableEntry {
     uint32_t pageAddress : 20;
 };
 
-struct E280Entry {
-    uint64_t baseAddr;
-    uint64_t len;
-    uint32_t type; 
-};
-
-struct UsableRegion {
-    uint64_t base;
-    uint64_t length;
-};
-
 #pragma pack(pop)
-
-uint32_t pmmAllocNextFreePage();
-
-static uint32_t mmioNextFree = MMIO_VIRTUAL_SPACE_BASE;
-static struct UsableRegion usableRegions[MAX_REGIONS];
-static uint8_t usableRegionsCurrentLength = 0;
-static uint8_t physicalPageRecord[0xFFFFFFFF/PAGE_SIZE/8];
-static uint32_t nextFreePageFramePhysicalStartingAddress = 4194304 - PAGE_SIZE;
-static uint32_t maxMemory = 4294967296 - 1;
-static uint32_t currentRegion = 0;
 
 void pmmSet(uint32_t physAddr, bool val) {
 
@@ -84,24 +59,6 @@ bool pmmGet(uint32_t physAddr) {
 
 // page allocation from far memory. returns physical first 20 bits of address shifted right 12 bites
 uint32_t pmmAllocNextFreePage() {
-    // bool found = true;
-    // for (int i = 0; i < usableRegionsCurrentLength; i++) {
-    //     if (usableRegions[i].base <= nextFreePageFramePhysicalStartingAddress && !(4096<=(usableRegions[i].length + usableRegions[i].base - nextFreePageFramePhysicalStartingAddress))) {
-    //         for (int j = i; j < usableRegionsCurrentLength; j++) {
-    //             if (usableRegions[j].length >= 4096) {
-    //                 nextFreePageFramePhysicalStartingAddress = usableRegions[j].base; 
-    //                 break;
-    //             } else if (j + 1 == usableRegionsCurrentLength) {
-    //                 found = false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    // }
-
-    // shifted down 12 b/c 2^12 is 4096, the size of a page 
-    // shifted down 8 because there are 8 bits per byte, each representing a page table
-
     for (int i = 0; i < 0xFFFFFFFF; i += 4096) {
         // kprint("Found address!!!!!!!!!!!!");
         if (!pmmGet(i)) {
@@ -109,15 +66,7 @@ uint32_t pmmAllocNextFreePage() {
             return i;
         }
     }
-    return 0xFFFFFFFF; // no pages left
-
-    // if (nextFreePageFramePhysicalStartingAddress + PAGE_SIZE > maxMemory) {
-    //     return 0xFFFFFFFF;
-    // } else {
-    //     nextFreePageFramePhysicalStartingAddress += PAGE_SIZE;
-
-    //     return nextFreePageFramePhysicalStartingAddress;
-    // }
+    return 0xFFFFFFFF; // no pages left    
 }
 
 // zero out PTE for an unused page
@@ -136,6 +85,20 @@ void premove(uint32_t vAddr) {
             : "r" (vAddr)
             : "memory"
     );
+}
+
+// FIX FUNCTION
+uint32_t virtToPhysAddr(uint32_t vAddr) {
+    uint32_t *PTE = (uint32_t*)((RECURSIVE_PT_ADDR) + 
+        ((0xFFFFF000 & vAddr) >> 10));
+    struct PageTableEntry *pte = (struct PageTableEntry*) PTE;
+    // << 12
+    // kprint_hex((((1) << 12) + (0x00000FFF & vAddr)));
+    // kprint_hex(pte->pageAddress);
+
+    // return (((pte->pageAddress) << 12) + (0x00000FFF & vAddr));
+
+    return 0xFFFFFFFF;
 }
 
 bool createNewPageTable(uint32_t vAddr) {
@@ -176,22 +139,4 @@ bool createNewPageTable(uint32_t vAddr) {
     };
 
     return true;
-}
-
-void* allocatePhysicalRange(uint32_t physAddr, uint32_t len) {
-    uint16_t offset = physAddr & 0x00000FFF;
-    uint32_t virtualStartAddr = mmioNextFree;
-
-    for (int i = ALIGN_DOWN(physAddr); i < ALIGN_UP(physAddr + len); i += 4096) {
-        pmmSet(i, PMM_UNAVAILABLE);
-        vmmAllocatePage(mmioNextFree, i, VMM_MMIO);
-        mmioNextFree += 4096;
-    }
-
-    return (uint32_t*)(virtualStartAddr + offset);
-}
-
-
-void deallocatePhysicalRange(uint32_t vAddr, uint32_t len) {
-
 }

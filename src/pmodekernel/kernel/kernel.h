@@ -1,6 +1,6 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-void kentry(void);
+__attribute__((section(".boot"))) void kentry(void);
 
 #endif

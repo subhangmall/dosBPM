@@ -28,16 +28,28 @@ $(TMP)/kernel.bin: $(TMP)/kernel.elf
 # $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o $(KERNEL)/linker.ld 
 # 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/pic.o $(TMP)/basicInterruptHandlers.o
 
-$(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(TMP)/pic.o $(KERNEL)/linker.ld 
-	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(TMP)/pic.o
+$(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kalloc.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(TMP)/pic.o $(TMP)/e820.o $(TMP)/pmm.o $(TMP)/contHighHalfSetup.o $(TMP)/vmm.o $(KERNEL)/linker.ld 
+	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kalloc.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/basicInterruptHandlers.o $(TMP)/e820.o $(TMP)/pmm.o $(TMP)/pic.o $(TMP)/contHighHalfSetup.o $(TMP)/vmm.o
 
 # $(TMP)/kernel.elf: $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/logging.o $(TMP)/kmemmgt.o $(KERNEL)/linker.ld
 # 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/logging.o $(TMP)/memSetup.o $(TMP)/kmemmgt.o
 
+$(TMP)/vmm.o: $(MEM)/vmm.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
+$(TMP)/e820.o: $(MEM)/e820.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
+$(TMP)/contHighHalfSetup.o: $(MEM)/contHighHalfSetup.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
+$(TMP)/pmm.o: $(MEM)/pmm.c | $(TMP)
+	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+
 $(TMP)/kernel.o: $(KERNEL)/kernel.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
-$(TMP)/kmemmgt.o: $(MEM)/kmemmgt.c | $(TMP)
+$(TMP)/kalloc.o: $(MEM)/kalloc.c | $(TMP)
 	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
 
 $(TMP)/memSetup.o: $(MEM)/memSetup.c | $(TMP)

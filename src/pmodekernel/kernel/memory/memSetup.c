@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "kmemmgt.h"
+#include "./contHighHalfSetup.h"
+
 
 #define PAGE_SIZE 4096
 
@@ -50,15 +52,6 @@ struct PageDirectoryEntry kernelPageDirectory[PAGE_SIZE/sizeof(struct PageDirect
 __attribute__((aligned(PAGE_SIZE)))
 __attribute__((section(".boot.data")))
 struct PageTableEntry firstKernelPageTable[PAGE_SIZE/sizeof(struct PageTableEntry)];
-
-// __attribute__((aligned(PAGE_SIZE)))
-// __attribute__((section(".boot.data")))
-// struct PageDirectoryEntry kernelPageDirectory[PAGE_SIZE/sizeof(struct PageDirectoryEntry)];
-
-// __attribute__((aligned(PAGE_SIZE)))
-// __attribute__((section(".boot.data")))
-// struct PageTableEntry firstKernelPageTable[PAGE_SIZE/sizeof(struct PageTableEntry)];
-
 
 __attribute__((section(".boot"))) void initMemory(void (*functionToJumpToAfterCompletion)()) {
     // kclear();
@@ -203,19 +196,3 @@ __attribute__((section(".boot"))) void initMemory(void (*functionToJumpToAfterCo
     //     __asm volatile ("hlt");
     // }
 }
-
-// void continuedHigherHalfSetup() {
-//     // pmmSet((uint32_t) &kernelPageDirectory, PMM_UNAVAILABLE);
-//     // pmmSet((uint32_t) &firstKernelPageTable, PMM_UNAVAILABLE);
-
-//     // for (int i = 0; i < PAGE_SIZE/sizeof(struct PageTableEntry); i++) {
-//     //     pmmSet(i, PMM_UNAVAILABLE);
-//     // }
-
-//     // asm volatile (
-//     //     "hlt"
-//     //     :
-//     //     :
-//     //     :
-//     // );
-// }

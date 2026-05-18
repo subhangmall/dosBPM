@@ -1,11 +1,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "./memory/memSetup.h"
-#include "./memory/kmemmgt.h"
+// #include "./memory/kmemmgt.h"
 // #include "./idt.h"
 #include "./logging.h"
 #include "./interrupts/idt.h"
 #include "./interrupts/pic.h"
+#include "./memory/vmm.h"
+#include "./memory/kalloc.h"
 
 extern void int0(void);
 // #include "./memory/kmemmgt.h"
@@ -119,26 +121,29 @@ void continueInitialization() {
 
     // kprint_hex((uint32_t) &a);
     
-    videoMemory = (volatile char*) allocatePhysicalRange(0xB8000, 4000);
+    videoMemory = (volatile char*) vmmAllocatePhysicalRange(0xB8000, 4000);
 
     setupInterruptStructures();
     initPIC(0x20, 0x28);
     disablePIC();
     enableInterrupts();
-    kprint_hex(1/0);
+    // kprint_hex(1/0);
     // asm volatile (
-    //     "int $0x20"
+    //     "int $0x00"
     //     :
     //     :
     //     :
     // );
-    // asm volatile (
-    //     "int $0x40"
-    //     :
-    //     :
-    //     :
-    // );
+    asm volatile (
+        "int $0x40"
+        :
+        :
+        :
+    );
     kprint("hi!!!;D");
+
+    uint8_t* a = kalloc(5000);
+    kprint_hex((uint32_t) a);
 
     while (1) {}
 
