@@ -1,8 +1,9 @@
 #include <stdint.h>
 #include "../logging.h"
 #include "./idt.h"
+#include "./intrStructs.h"
 
-void divByZeroException(uint32_t* stack) {
+void divByZeroException(struct InterruptStackFrame* stack) {
     kprint("Division by zero error! Halting the system!");
     asm volatile (
         "hlt"
@@ -12,7 +13,7 @@ void divByZeroException(uint32_t* stack) {
     );
 }
 
-void pageFault(uint32_t* stack) {
+void pageFault(struct InterruptStackFrame* stack) {
     kprint("Page fault! Halting the system!");
     asm volatile ("hlt");
 }

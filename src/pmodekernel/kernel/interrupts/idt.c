@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "../logging.h"
+#include "./intrStructs.h"
 #define NULL ((void*)0)
 
 
@@ -25,7 +26,7 @@ struct IdtrStruct {
 
 struct IdtrStruct idtr __attribute__((aligned(16)));
 struct InterruptDescriptor idt[256] __attribute__((aligned(16)));
-void (*interruptRequestHandlers[256])(uint32_t*);
+void (*interruptRequestHandlers[256])(struct InterruptStackFrame*);
 extern void int0(void);
 extern void int1(void);
 extern void int2(void);
@@ -316,13 +317,13 @@ void (*idtRequestDispatchers[256])(void) = {
     intF0,intF1,intF2,intF3,intF4,intF5,intF6,intF7,
     intF8,intF9,intFA,intFB,intFC,intFD,intFE,intFF
 };
-void commonHandler(uint32_t* stack);
+void commonHandler(struct InterruptStackFrame* stack);
 
-void defaultFun(uint32_t* stack) {
+void defaultFun(struct InterruptStackFrame* stack) {
     kprint("Uninitialized interrupt ");
-    kprint_hex(stack[12]);
+    kprint_hex(stack->intNum);
     kprint(" with (potential) error code ");
-    kprint_hex(stack[13]);
+    kprint_hex(stack->errNum);
 }
 
 void setInterruptDispatcher(uint8_t intNum, uint32_t addr, uint16_t segSelector, uint8_t gateType, uint8_t dpl);
@@ -355,8 +356,8 @@ void setInterruptDispatcher(uint8_t intNum, uint32_t addr, uint16_t segSelector,
     idt[intNum] = intDesc;
 }
 
-void commonHandler(uint32_t* stack) {
-    interruptRequestHandlers[stack[12]](stack);
+void commonHandler(struct InterruptStackFrame* stack) {
+    interruptRequestHandlers[stack->intNum](stack);
 }
 
 void enableInterrupts() {
@@ -370,5 +371,5 @@ void enableInterrupts() {
 }
 
 void setIDTHandler(int isrNum, int handlerAddr) {
-    interruptRequestHandlers[isrNum] = (void(*)(uint32_t*)) handlerAddr;
+    interruptRequestHandlers[isrNum] = (void(*)(struct InterruptStackFrame*)) handlerAddr;
 }
