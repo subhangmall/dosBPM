@@ -9,5 +9,6 @@ bool vmmAddPage(uint32_t vAddr, bool shouldZero);
 void vmmZeroPage(uint32_t vAddr);
 void* vmmAllocatePhysicalRange(uint32_t physAddr, uint32_t len);
 void vmmDeallocatePhysicalRange(uint32_t vAddr, uint32_t len);
+void vmmRemovePage(uint32_t vAddr);
 
 #endif

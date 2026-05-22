@@ -86,6 +86,11 @@ void disablePIC(void) {
     outb(PIC2_DATA, 0xff);
 }
 
+void enablePIC(void) {
+	outb(PIC1_DATA, 0);
+	outb(PIC2_DATA, 0);
+}
+
 void sendEOIToPIC(uint8_t irq) {
 	if (irq >= 8)
 		outb(PIC2_COMMAND, PIC_EOI);

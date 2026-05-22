@@ -154,6 +154,16 @@ void continueInitialization() {
     // kprint_hex(1/0);
     // kprint_hex((uint32_t) *(uint8_t*) 0x12345567);
 
+    // unmap lower half
+    for (int i = 0; i < 1024; i++) {
+        vmmRemovePage(i*4096);
+        kclear(); // DO NOT REMOVE NO MATTER WHAT; IF U REMOVE THIS THE SYSTEM WILL BE BRICKED
+    }
+    disablePIC();
+    kprint("hi");
+    enablePIC();
+    // kprint_hex(*(uint32_t*)(0x0000000)); // test page fault, works
+
     while (1) {}
 
 }

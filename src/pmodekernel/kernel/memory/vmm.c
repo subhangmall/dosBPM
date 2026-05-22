@@ -8,6 +8,10 @@ static uint32_t mmioNextFree = MMIO_VIRTUAL_SPACE_BASE;
 
 void vmmZeroPage(uint32_t vAddr);
 
+void vmmRemovePage(uint32_t vAddr) {
+    ((struct PageTableEntry*)(RECURSIVE_PT_ADDR + (vAddr >> 12)))->present=0;
+}
+
 bool vmmAllocatePage(uint32_t vAddr, uint32_t physAddr, uint8_t flags) {
     // kprint("Vaddr : ");
     // kprint_hex(vAddr);
