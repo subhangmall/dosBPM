@@ -4,11 +4,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../logging.h"
-#include "./pmm.h"
-#include "./e820.h"
-#include "./vmm.h"
-#include "./commonMacros.h"
+#include <kernel/logging.h>
+#include <kernel/memory/pmm.h>
+#include <kernel/memory/e820.h>
+#include <kernel/memory/vmm.h>
+#include <kernel.h>
+#include <kernel/memory.h>
 
 void* kalloc(uint32_t numBytes);
 void free(void* ptr);

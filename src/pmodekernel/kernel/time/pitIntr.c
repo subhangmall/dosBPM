@@ -1,8 +1,7 @@
 #include <stdint.h>
-#include "../interrupts/intrStructs.h"
-#include "./time.h"
-#include "../interrupts/pic.h"
-
+#include <kernel/interrupts/intrStructs.h>
+#include <kernel/time/time.h>
+#include <kernel/interrupts/pic.h>
 extern volatile uint32_t ticks;
 
 #define PIC1_COMMAND	0x20

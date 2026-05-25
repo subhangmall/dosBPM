@@ -30,49 +30,49 @@ $(TMP)/kernel.elf: $(TMP)/kernel.o $ $(TMP)/memSetup.o $(TMP)/kalloc.o $(TMP)/lo
 	ld -m elf_i386 -T $(KERNEL)/linker.ld -o $(TMP)/kernel.elf $(TMP)/kernel.o $(TMP)/memSetup.o $(TMP)/kalloc.o $(TMP)/logging.o $(TMP)/idt.o $(TMP)/intDispatchers.o $(TMP)/iolibrary.o $(TMP)/initInterruptHandlers.o $(TMP)/e820.o $(TMP)/pmm.o $(TMP)/pic.o $(TMP)/contHighHalfSetup.o $(TMP)/vmm.o $(TMP)/gdt.o $(TMP)/time.o $(TMP)/pitIntr.o
 
 $(TMP)/pitIntr.o: $(TIME)/pitIntr.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/time.o: $(TIME)/time.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/gdt.o: $(KERNEL)/gdt.asm | $(TMP)
 	nasm -f elf32 $< -o $@
 
 $(TMP)/vmm.o: $(MEM)/vmm.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/e820.o: $(MEM)/e820.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/contHighHalfSetup.o: $(MEM)/contHighHalfSetup.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/pmm.o: $(MEM)/pmm.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/kernel.o: $(KERNEL)/kernel.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/kalloc.o: $(MEM)/kalloc.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/memSetup.o: $(MEM)/memSetup.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/logging.o: $(KERNEL)/logging.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/idt.o: $(INTR)/idt.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/pic.o: $(INTR)/pic.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/iolibrary.o: $(IO)/iolibrary.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 $(TMP)/initInterruptHandlers.o: $(INTR)/initInterruptHandlers.c | $(TMP)
-	gcc -m32 -ffreestanding -fno-stack-protector -c $< -o $@
+	gcc -m32 -ffreestanding -fno-stack-protector -Isrc/pmodekernel/include -c $< -o $@
 
 
 $(TMP)/intDispatchers.o: $(INTR)/intDispatchers.asm | $(TMP)

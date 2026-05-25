@@ -1,7 +1,7 @@
-#include "../io/iolibrary.h"
-#include "./pitIntr.h"
-#include "../interrupts/pic.h"
-#include "../logging.h"
+#include <kernel/io/iolibrary.h>
+#include <kernel/time/pitIntr.h>
+#include <kernel/interrupts/pic.h>
+#include <kernel/logging.h>
 
 uint32_t freq;
 volatile uint32_t ticks = 0; 
@@ -21,8 +21,9 @@ void initTimeIntrHandler() {
 // __attribute__((aligned(4096)))
 void sleep(uint32_t ms) {
     uint32_t startingTime = ticks;
+    uint32_t targetTime = (ms * freq)/1000 + startingTime;
     // kprint_hex(startingTime);
-    while (((ticks-startingTime) * 1000) < ms * freq) {
+    while (ticks < targetTime) {
         asm volatile("pause" ::: "memory");
     };
 }

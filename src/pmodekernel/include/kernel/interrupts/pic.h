@@ -1,6 +1,5 @@
 #include <stdint.h>
-#include "./intrStructs.h"
-
+#include <kernel/interrupts/intrStructs.h>
 #ifndef PIC_H
 #define PIC_H
 

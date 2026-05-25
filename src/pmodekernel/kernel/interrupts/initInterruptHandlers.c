@@ -1,7 +1,7 @@
 #include <stdint.h>
-#include "../logging.h"
-#include "./idt.h"
-#include "./intrStructs.h"
+#include <kernel/logging.h>
+#include <kernel/interrupts/idt.h>
+#include <kernel/interrupts/intrStructs.h>
 
 void divByZeroException(struct InterruptStackFrame* stack) {
     kprint("Division by zero error! Halting the system!");

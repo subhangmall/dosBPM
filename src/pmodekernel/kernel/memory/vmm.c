@@ -1,8 +1,9 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "./pmm.h"
-#include "../logging.h"
-#include "./commonMacros.h"
+#include <kernel/memory/pmm.h>
+#include <kernel/logging.h>
+#include <kernel.h>
+#include <kernel/memory.h>
 
 static uint32_t mmioNextFree = MMIO_VIRTUAL_SPACE_BASE;
 
@@ -10,6 +11,13 @@ void vmmZeroPage(uint32_t vAddr);
 
 void vmmRemovePage(uint32_t vAddr) {
     ((struct PageTableEntry*)(RECURSIVE_PT_ADDR + (vAddr >> 12)))->present=0;
+    // REFRESH
+    asm volatile (
+            "invlpg (%0)"
+            :
+            : "r" (vAddr)
+            : "memory"
+    );
 }
 
 bool vmmAllocatePage(uint32_t vAddr, uint32_t physAddr, uint8_t flags) {

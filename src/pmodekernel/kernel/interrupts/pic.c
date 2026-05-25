@@ -1,9 +1,9 @@
 // THANKS TO THE OS DEV WIKI for help in programming the PIC init, disable, and eoi functions
 #include <stdint.h>
-#include "../io/iolibrary.h"
-#include "../logging.h"
-#include "./idt.h"
-#include "./intrStructs.h"
+#include <kernel/io/iolibrary.h>
+#include <kernel/logging.h>
+#include <kernel/interrupts/idt.h>
+#include <kernel/interrupts/intrStructs.h>
 
 #define PIC1		0x20		/* IO base address for master PIC */
 #define PIC2		0xA0		/* IO base address for slave PIC */

@@ -34,12 +34,16 @@ void kputc(char c) {
 }
 
 void kprint(const char* s) {
+    // asm volatile("cli");
     // s--;
     while (*s)
         kputc(*s++);
+
+    // asm volatile("sti");
 }
 
 void kprint_hex(uint32_t n) {
+    // asm volatile("cli");
     char hexChars[] = "0123456789ABCDEF";
     char result[11];
 
@@ -54,9 +58,11 @@ void kprint_hex(uint32_t n) {
     }
 
     kprint(result);
+    // asm volatile("sti");
 }
 
 void kprint_hex64(uint64_t n) {
+    // asm volatile("cli");
     char hexChars[] = "0123456789ABCDEF";
     char result[19];
 
@@ -70,4 +76,5 @@ void kprint_hex64(uint64_t n) {
     }
 
     kprint(result);
+    // asm volatile("sti");
 }

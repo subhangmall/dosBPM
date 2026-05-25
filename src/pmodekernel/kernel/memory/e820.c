@@ -1,7 +1,8 @@
-#include "./pmm.h"
+#include <kernel/memory/pmm.h>
 #include <stdint.h>
-#include "../logging.h"
-#include "./commonMacros.h"
+#include <kernel/logging.h>
+#include <kernel.h>
+#include <kernel/memory.h>
 
 #pragma pack(push, 1)
 

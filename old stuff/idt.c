@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "./memory/kmemmgt.h"
-#include "./logging.h"
+#include <kernel/logging.h>
 
 #define NULL ((void*)0)
 #define ISR(n) int##n

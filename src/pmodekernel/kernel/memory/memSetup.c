@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <stdbool.h>
-// #include "kmemmgt.h"
-#include "./contHighHalfSetup.h"
-#include "./commonMacros.h"
+#include <kernel/memory/contHighHalfSetup.h>
+#include <kernel.h>
+#include <kernel/memory.h>
 
 void highHalfEntry(void);
 

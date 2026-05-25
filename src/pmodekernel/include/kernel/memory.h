@@ -1,7 +1,5 @@
-#ifndef COMMONMACROS_H
-#define COMMONMACROS_H
-
-#define NULL ((void*)0)
+#ifndef MEMORY_H
+#define MEMORY_H
 
 #define MAX_REGIONS 1024
 #define AVAILABLE_MEM_E820 1

@@ -1,7 +1,8 @@
 #include <stdint.h>
-#include "../logging.h"
-#include "./intrStructs.h"
-#define NULL ((void*)0)
+#include <kernel/logging.h>
+#include <kernel/interrupts/intrStructs.h>
+#include <kernel.h>
+// #define NULL ((void*)0)
 
 
 #pragma pack(push, 1) 

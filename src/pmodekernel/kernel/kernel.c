@@ -1,16 +1,16 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "./memory/memSetup.h"
+#include <kernel/memory/memSetup.h>
 // #include "./memory/kmemmgt.h"
 // #include "./idt.h"
-#include "./logging.h"
-#include "./interrupts/idt.h"
-#include "./interrupts/pic.h"
-#include "./memory/vmm.h"
-#include "./memory/kalloc.h"
-#include "./interrupts/initInterruptHandlers.h"
-#include "./time/time.h"
-#include "./memory/pmm.h"
+#include <kernel/logging.h>
+#include <kernel/interrupts/idt.h>
+#include <kernel/interrupts/pic.h>
+#include <kernel/memory/vmm.h>
+#include <kernel/memory/kalloc.h>
+#include <kernel/interrupts/initInterruptHandlers.h>
+#include <kernel/time/time.h>
+#include <kernel/memory/pmm.h>
 // #include "./gdt.asm"
 
 // extern void int0(void);
@@ -107,25 +107,10 @@ void continueInitialization();
 
 
 __attribute__((section(".boot"))) void kentry(void) {
-    // *((uint8_t*)0xB8002) = 'l';
-    // *((uint8_t*)0xB8003) = 0x0F;
-
-    // videoMemory = (volatile char*) 0xB8000;
-
-    // asm volatile("hlt");
-
-    // kclear();
-
     initMemory(&continueInitialization);
 }
 
-void continueInitialization() {
-    // volatile char* a = (volatile char*) allocatePhysicalRange(0xB8000, 4000);
-    // videoMemory = (volatile char*) 0xC00B8000;
-
-
-    // kprint_hex((uint32_t) &a);
-    
+void continueInitialization() {  
     videoMemory = (volatile char*) vmmAllocatePhysicalRange(0xB8000, 4000);
 
     setupInterruptStructures();
@@ -178,8 +163,9 @@ void continueInitialization() {
     sleep(1000);
     kprint("1seclater");
     sleep(10000);
-    videoMemory[0] = 'a';
-    kprint("10seclater\0");
+    asm volatile("cli");
+    // kprint("10seclater");
+    asm volatile("sti");
 
     while (1) {}
 

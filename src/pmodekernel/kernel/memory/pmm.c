@@ -1,5 +1,6 @@
 #include <stdint.h>
-#include "./commonMacros.h"
+#include <kernel.h>
+#include <kernel/memory.h>
 
 uint8_t physicalPageRecord[0xFFFFFFFF/PAGE_SIZE/8];
 static uint32_t mmioNextFree = MMIO_VIRTUAL_SPACE_BASE;

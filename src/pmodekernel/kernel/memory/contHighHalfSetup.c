@@ -1,7 +1,8 @@
 #include <stdint.h>
-#include "./e820.h"
-#include "./pmm.h"
-#include "./commonMacros.h"
+#include <kernel/memory/e820.h>
+#include <kernel/memory/pmm.h>
+#include <kernel.h>
+#include <kernel/memory.h>
 
 void continuedHigherHalfMemSetup(uint32_t firstKernelPageTableAddr, uint32_t kernelPageDirectoryAddr) {
     parseE820Output();
