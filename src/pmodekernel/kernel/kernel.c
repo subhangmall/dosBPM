@@ -111,19 +111,12 @@ __attribute__((section(".boot"))) void kentry(void) {
 }
 
 void continueInitialization() {  
-    videoMemory = (volatile char*) vmmAllocatePhysicalRange(0xB8000, 4000);
+    // videoMemory = (volatile char*) vmmAllocatePhysicalRange(0xB8000, 4000);
 
     setupInterruptStructures();
     initPIC(0x20, 0x28);
     // disablePIC();
     enableInterrupts();
-    // kprint_hex(1/0);
-    // asm volatile (
-    //     "int $0x00"
-    //     :
-    //     :
-    //     :
-    // );
     asm volatile (
         "int $0x40"
         :
@@ -142,20 +135,24 @@ void continueInitialization() {
     // kprint_hex((uint32_t) *(uint8_t*) 0x12345567);
 
     // unmap lower half
-    // for (int i = 0; i < 1024; i++) {
-    //     vmmRemovePage(i*4096);
-    //     kclear(); // DO NOT REMOVE NO MATTER WHAT; IF U REMOVE THIS THE SYSTEM WILL BE BRICKED
-    // }
-    ((struct PageDirectoryEntry*)(0xFFFFF000))->present = 0; // remove lower half mappign
-    asm volatile (
-        "mov %%cr3, %%eax\n\t"
-        "mov %%eax, %%cr3\n\t"
-        : : : "eax", "memory"
-    );
+    for (int i = 0; i < 1024; i++) {
+        vmmRemovePage(i*4096);
+        kclear(); // DO NOT REMOVE NO MATTER WHAT; IF U REMOVE THIS THE SYSTEM WILL BE BRICKED
+    }
+    // disablePIC();
 
-    disablePIC();
+    // ((struct PageDirectoryEntry*)(0xFFFFF000))->present = 0; // remove lower half mappign
+    // asm volatile (
+    //     "mov %%cr3, %%eax\n\t"
+    //     "mov %%eax, %%cr3\n\t"
+    //     : : : "eax", "memory"
+    // );
+
     
-    enablePIC();
+    
+    // enablePIC();
+
+
     // kprint_hex(*(uint32_t*)(0x0000000)); // test page fault, works
     setPitPeriodic(1193); // fire (around) every  10 ms
     initTimeIntrHandler();
@@ -163,9 +160,20 @@ void continueInitialization() {
     sleep(1000);
     kprint("1seclater");
     sleep(10000);
-    asm volatile("cli");
-    // kprint("10seclater");
-    asm volatile("sti");
+    // asm volatile("cli");
+    kprint("10seclater");
+    kprint("esp: ");
+    uint32_t esp;
+    asm volatile (
+        "mov %%esp, %%eax\n\t"
+        "mov %%eax, %0\n\t"
+        : "=m" (esp)
+        : 
+        : "eax"
+    );
+    kprint_hex(esp);
+    sleep(1000);
+    kprint("1 sec later");
 
     while (1) {}
 
