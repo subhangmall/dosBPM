@@ -1,3 +1,5 @@
+// TODO: FIX WEIRD MEMORY
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <kernel/memory/memSetup.h>
@@ -137,6 +139,13 @@ void continueInitialization() {
     // unmap lower half
     for (int i = 0; i < 1024; i++) {
         vmmRemovePage(i*4096);
+        uint32_t vAddr = i*4096 + 0xC0000000;
+        asm volatile (
+            "invlpg (%0)"
+            :
+            : "r" (vAddr)
+            : "memory"
+        );
         kclear(); // DO NOT REMOVE NO MATTER WHAT; IF U REMOVE THIS THE SYSTEM WILL BE BRICKED
     }
     // disablePIC();
@@ -147,8 +156,6 @@ void continueInitialization() {
     //     "mov %%eax, %%cr3\n\t"
     //     : : : "eax", "memory"
     // );
-
-    
     
     // enablePIC();
 
@@ -156,12 +163,18 @@ void continueInitialization() {
     // kprint_hex(*(uint32_t*)(0x0000000)); // test page fault, works
     setPitPeriodic(1193); // fire (around) every  10 ms
     initTimeIntrHandler();
+
+    // reaload cr3
+    // uint32_t cr3;
+    // asm volatile("mov %%cr3, %0" : "=r"(cr3));
+    // asm volatile("mov %0, %%cr3" :: "r"(cr3));
+
     kprint("hi");
     sleep(1000);
     kprint("1seclater");
     sleep(10000);
     // asm volatile("cli");
-    kprint("10seclater");
+    kprint("1seclater");
     kprint("esp: ");
     uint32_t esp;
     asm volatile (
@@ -173,7 +186,6 @@ void continueInitialization() {
     );
     kprint_hex(esp);
     sleep(1000);
-    kprint("1 sec later");
 
     while (1) {}
 
