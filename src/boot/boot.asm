@@ -106,7 +106,11 @@ main:
 
     call copy_data_to_high_half
 
-    jmp 0x08:0x00100000
+    push 0x00005000 ; e820
+    push 0x00008000 ; length
+    
+    
+    call 0x08:0x00100000
 
     ; mov edi, 0xB8002
 

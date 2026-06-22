@@ -23,146 +23,41 @@
 // #include "./basicInterruptHandlers.h"
 extern void gdtFlush();
 
-__attribute__((section(".boot"))) void kentry(void);
+__attribute__((section(".boot"))) void kentry(uint32_t dummyCS, uint32_t e820LenAddr, uint32_t e820StartAddress);
 void continueInitialization();
 
-// volatile char* videoMemory;
-
-// #define VMM_PRESENT    0x1
-// #define VMM_WRITABLE   0x2
-// #define VMM_USER       0x4
-// #define VMM_MMIO       0x8
-
-// #define PAGE_SIZE 4096
-// #define RECURSIVE_PD_ADDR 0xFFC00000
-// #define RECURSIVE_PD ((struct PageDirectoryEntry*) RECURSIVE_PD_ADDR) // where Page Directory Table appears in memory b/c the last idx of the PDT refers back to the start of the PDT
-// #define NULL ((void*)0)
-// #define MMIO_VIRTUAL_SPACE_BASE 0xE0000000
-// #define MMIO_VIRTUAL_SPACE_SIZE 0x10000000
-// #define AVAILABLE_MEM_E820 1
-// #define MAX_REGIONS 1024
-// #define PMM_UNAVAILABLE true
-// #define PMM_AVAILABLE false
-// #define ALIGN_DOWN(x) ((x) & ~(PAGE_SIZE - 1))
-// #define ALIGN_UP(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
-
-// #define KERNEL_STACK_VADDR 0xC0100000
-// #define KERNEL_STACK_SIZE  0x4000
-
-// void highHalfEntry(void);
-
-// #pragma pack(push, 1)
-
-// struct PageDirectoryEntry {
-//     uint32_t present : 1;
-//     uint32_t rw : 1;
-//     uint32_t user : 1;
-//     uint32_t pwt : 1;
-//     uint32_t pcd : 1;
-//     uint32_t accessed : 1;
-//     uint32_t reserved : 1;
-//     uint32_t pageSize : 1;
-//     uint32_t ignored : 1;
-//     uint32_t available : 3;
-//     uint32_t pageAddress : 20;
-// };
-
-// struct PageTableEntry {
-//     uint32_t present : 1;
-//     uint32_t rw : 1;
-//     uint32_t user : 1;
-//     uint32_t pwt : 1;
-//     uint32_t pcd : 1;
-//     uint32_t accessed : 1;
-//     uint32_t dirty : 1;
-//     uint32_t pageTableAttrIdx : 1;
-//     uint32_t globalPage : 1;
-//     uint32_t available : 3;
-//     uint32_t pageAddress : 20;
-// };
-
-// #pragma pack(pop)
-
-
-// __attribute__((section(".boot.data")))
-// static uint8_t physicalPageRecord[0xFFFFFFFF/PAGE_SIZE/8];
-
-// __attribute__((aligned(PAGE_SIZE)))
-// __attribute__((section(".boot.data")))
-// struct PageDirectoryEntry kernelPageDirectory[PAGE_SIZE/sizeof(struct PageDirectoryEntry)];
-
-// __attribute__((aligned(PAGE_SIZE)))
-// __attribute__((section(".boot.data")))
-// struct PageTableEntry firstKernelPageTable[PAGE_SIZE/sizeof(struct PageTableEntry)];
-
-// __attribute__((section(".boot.data")))
-// static int cursor = 0;
-
-// __attribute__((section(".boot.data")))
-// volatile char* videoMemory = (volatile char*) 0xB8000;
-
-// __attribute__((section(".boot"))) void kentry(void);
-// __attribute__((section(".boot"))) void kprint_hex(uint32_t n);
-// __attribute__((section(".boot"))) void pmmSet(uint32_t physAddr, bool val);
-// __attribute__((section(".boot"))) bool pmmGet(uint32_t physAddr);
-
-
-
-__attribute__((section(".boot"))) void kentry(void) {
-    initMemory(&continueInitialization);
+__attribute__((section(".boot"))) void kentry(uint32_t dummyCS, uint32_t e820LenAddr, uint32_t e820StartAddress) { // dummy CS because CS Is also pushed onto the stack cause it is called from a far jump
+    initMemory(&continueInitialization, e820LenAddr, e820StartAddress);
 }
 
 void continueInitialization() {  
-    // videoMemory = (volatile char*) vmmAllocatePhysicalRange(0xB8000, 4000);
+    // kclear();
 
     setupInterruptStructures();
     initPIC(0x20, 0x28);
     // disablePIC();
     enableInterrupts();
-    asm volatile (
-        "int $0x40"
-        :
-        :
-        :
-    );
-    kprint("hi!!!;D");
+    // asm volatile (
+    //     "int $0x40"
+    //     :
+    //     :
+    //     :
+    // );
+    // kprint("hi!!!;D");
 
     // uint8_t* a = kalloc(5000);
     // kprint_hex((uint32_t) a);
     // kprint_hex(1/0);
     // setIDTHandler(0, )
     initInterruptHandlers();
-    gdtFlush();
+    gdtFlush(); // move gdt to higher half
     // kprint_hex(1/0);
     // kprint_hex((uint32_t) *(uint8_t*) 0x12345567);
-
-    // unmap lower half
-    // for (int i = 0; i < 1024; i++) {
-    //     vmmRemovePage(i*4096);
-    //     uint32_t vAddr = i*4096 + 0xC0000000;
-    //     asm volatile (
-    //         "invlpg (%0)"
-    //         :
-    //         : "r" (vAddr)
-    //         : "memory"
-    //     );
-    //     kclear(); // DO NOT REMOVE NO MATTER WHAT; IF U REMOVE THIS THE SYSTEM WILL BE BRICKED
-    // }
-    // disablePIC();
-
-    // ((struct PageDirectoryEntry*)(0xFFFFF000))->present = 0; // remove lower half mappign
-    // asm volatile (
-    //     "mov %%cr3, %%eax\n\t"
-    //     "mov %%eax, %%cr3\n\t"
-    //     : : : "eax", "memory"
-    // );
-    
-    // enablePIC();
-
+    kprint("hi");
 
     // kprint_hex(*(uint32_t*)(0x0000000)); // test page fault, works
     setPitPeriodic(1193); // fire (around) every  10 ms
-    initTimeIntrHandler();
+    videoMemory = (volatile char*) vmmAllocatePhysicalRange(0xB8000, 4000);
 
     // reaload cr3
     // uint32_t* a = (uint32_t*) kalloc(1000);
@@ -171,25 +66,23 @@ void continueInitialization() {
 
 
     // kprint("hi");
-    // sleep(1000);
-    // kprint("1seclater");
+    
+    sleep(2000);
+    kprint("1seclater");
     // sleep(10000);
-    // // asm volatile("cli");
-    // kprint("1seclater");
-    kprint("esp: ");
-    uint32_t esp;
-    asm volatile (
-        "mov %%esp, %%eax\n\t"
-        "mov %%eax, %0\n\t"
-        : "=m" (esp)
-        : 
-        : "eax"
-    );
-    kprint_hex(esp);
-    // sleep(1000);
+    // kprint("10seclater");
+    // kprint("esp: ");
+    // uint32_t esp;
+    // asm volatile (
+    //     "mov %%esp, %%eax\n\t"
+    //     "mov %%eax, %0\n\t"
+    //     : "=m" (esp)
+    //     : 
+    //     : "eax"
+    // );
+    // kprint_hex(esp);
+    // uint32_t* a = (uint32_t*)kalloc(10000);
 
-    // kprint_hex((uint32_t)&setPitPeriodic);
-    // kprint_hex((uint32_t)&setIDTHandler);
     
 
     while (1) {}

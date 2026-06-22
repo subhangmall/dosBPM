@@ -50,7 +50,7 @@ struct PageTableEntry firstKernelPageTable[PAGE_SIZE/sizeof(struct PageTableEntr
 // __attribute__((section(".boot.data")))
 // struct PageTableEntry firstKernelPageTableHighHalf[PAGE_SIZE/sizeof(struct PageTableEntry)];
 
-__attribute__((section(".boot"))) void initMemory(void (*functionToJumpToAfterCompletion)()) {
+__attribute__((section(".boot"))) void initMemory(void (*functionToJumpToAfterCompletion)(), uint32_t e820LenAddr, uint32_t e820StartAddress) {
     struct PageDirectoryEntry pde = {
         .present = 0,
         .rw = 0,
@@ -153,9 +153,11 @@ __attribute__((section(".boot"))) void initMemory(void (*functionToJumpToAfterCo
         "push %1\n\t" // ADDRESS TO RETURN TO
         "push %2\n\t"
         "push %3\n\t"
-        "jmp *%4\n\t"        
+        "push %4\n\t"
+        "push %5\n\t"
+        "jmp *%6\n\t"        
         :
-        :  "r" (kPDAddress), "r" (&kernelPageDirectory), "r" (&firstPageDirectoryEntry), "r"(functionToJumpToAfterCompletion), "r"(continuedHigherHalfMemSetup)
+        :  "r" (kPDAddress), "r" (&kernelPageDirectory), "r" (&firstPageDirectoryEntry), "m" (e820StartAddress), "m"(e820LenAddr), "r"(functionToJumpToAfterCompletion), "r"(continuedHigherHalfMemSetup)
         // :  "r" (kPDAddress)
         : "eax", "esp"
     );

@@ -58,13 +58,13 @@ void mergeRegions() {
     }
 }
 
-void parseE820Output() {
+void parseE820Output(uint32_t e820LenAddr, uint32_t e820StartAddress) {
     // setup frame allocator
     for (uint32_t i = 0; i < 0xFFFFFFFF/PAGE_SIZE/8; i++) {
         physicalPageRecord[i] = 0xFF; // means all 8 bits are currently unavailable
     }
 
-    uint16_t* listLength = (uint16_t*) 0x00008000; // where the length of the list is stored by the assembler;
+    uint16_t* listLength = (uint16_t*) e820LenAddr; // where the length of the list is stored by the assembler;
     // 0x5000 is where the entries are stored, each 24 bytes
 
     // kprint("List length: ");
@@ -76,7 +76,7 @@ void parseE820Output() {
             break;
         }
         
-        struct E280Entry* entry = (struct E280Entry*) (i * 24 + 0x5000);
+        struct E280Entry* entry = (struct E280Entry*) (i * 24 + e820StartAddress);
 
         if (entry->type == AVAILABLE_MEM_E820) {
             struct UsableRegion region = {

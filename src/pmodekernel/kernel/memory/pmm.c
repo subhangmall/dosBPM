@@ -125,11 +125,12 @@ bool createNewPageTable(uint32_t vAddr) {
         : "eax", "memory"
     );
 
-    uint8_t *newPageTable = (uint8_t*) (RECURSIVE_PT_ADDR + (ptdIdx << 12));
+    volatile uint8_t *newPageTable = (volatile uint8_t*) (RECURSIVE_PT_ADDR + (ptdIdx << 12));
 
     for (int i = 0; i < 4096; i++) {
         newPageTable[i] = 0x00;
     };
+    asm volatile("" ::: "memory");
 
     return true;
 }
