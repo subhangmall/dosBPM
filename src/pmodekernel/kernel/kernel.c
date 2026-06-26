@@ -85,6 +85,7 @@ void continueInitialization() {
     // );
 
     kprint("hi");
+    kprint("hi");
     
     // sleep(2000);
     // videoMemory[0] = 'a';

@@ -11,19 +11,27 @@ BOOT := src/boot
 TMP := tmp
 OUT := target
 
-all: $(OUT)/floppy.img
+all: $(OUT)/freedos.img
 
-run: $(OUT)/floppy.img
-	qemu-system-i386 -m 4000 -fda $(OUT)/floppy.img
+run: $(OUT)/freedos.img
+	qemu-system-i386 -m 4000 -rtc base=localtime -hda $(OUT)/freedos.img -boot d
 
-$(OUT)/floppy.img: $(TMP)/kernel.bin $(TMP)/boot.bin | $(OUT)
-	dd if=/dev/zero of=$(OUT)/floppy.img bs=512 count=2880
-	dd if=$(TMP)/boot.bin of=$(OUT)/floppy.img conv=notrunc
-	dd if=$(TMP)/kernel.bin of=$(OUT)/floppy.img bs=512 seek=1 conv=notrunc
+$(OUT)/freedos.img: $(TMP)/kernel.bin $(TMP)/boot.com | $(OUT)
+	@if [ "$$EUID" -ne 0 ]; then \
+        echo "To flash freedos.img, make must be run as root"; \
+        exit 1; \
+    fi
+	
+	mkdir -p /mnt/freedos
+	mount -t msdos -o loop,offset=32256 $(OUT)/freedos.img /mnt/freedos
+	rm -f /mnt/freedos/custom/boot.com
+	rm -f /mnt/freedos/custom/kernel.bin
+	cp $(TMP)/boot.com /mnt/freedos/custom
+	cp $(TMP)/kernel.bin /mnt/freedos/custom
+	umount /mnt/freedos
 
-$(TMP)/boot.bin: $(BOOT)/boot.asm $(TMP)/kernel.bin | $(TMP)
-	@S=$$(( ($$(stat -c%s $(TMP)/kernel.bin) + 511) / 512 )); \
-	nasm -f bin $(BOOT)/boot.asm -D KERN_SECTORS=$$S -o $(TMP)/boot.bin
+$(TMP)/boot.com: $(BOOT)/main.asm | $(TMP)
+	nasm -f bin $< -o $@
 
 $(TMP)/kernel.bin: $(TMP)/kernel.elf
 	objcopy -O binary $(TMP)/kernel.elf $(TMP)/kernel.bin
@@ -93,4 +101,4 @@ $(OUT):
 	mkdir -p $(OUT)
 
 clean:
-	rm -rf $(TMP) $(OUT)
+	rm -rf $(TMP)
